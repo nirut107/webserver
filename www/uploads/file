@@ -1,7 +1,10 @@
-------WebKitFormBoundaryV3fBlq3BOyn1UNQq
-Content-Disposition: form-data; name="file"; filename="test.txt"
-Content-Type: text/plain
+-----------------------------224024577422102974951684062686
+Content-Disposition: form-data; name="file"; filename="advanced_mult.py"
+Content-Type: text/x-python
 
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-
-------WebKitFormBoundaryV3fBlq3BOyn1UNQq--
+for x in range(11):
+	print(f"Table de {x}: ", end='')
+	for y in range(11):
+		print(x * y, end=' ')
+	print()
+-----------------------------224024577422102974951684062686--
