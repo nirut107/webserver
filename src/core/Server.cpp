@@ -165,7 +165,7 @@ void Server::handleRequest(int clientSocket, const RouteConfig* route) {
                 std::cout << "Using upload store path: " << uploadPath << std::endl;
             }
             std::cout << "Request body size: " << request.getBody().length() << std::endl;
-            FileHandler::handlePost(uploadPath, request.getBody(), response, "file555");
+            FileHandler::handlePost(uploadPath, request.getBody(), response);
         } else if (request.getMethod() == "DELETE") {
             FileHandler::handleDelete(route->root + request.getPath(), response);
         }

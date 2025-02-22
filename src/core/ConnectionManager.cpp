@@ -68,10 +68,10 @@ Connection* ConnectionManager::getConnection(int socket) {
 }
 
 void ConnectionManager::handleRead(Connection& conn) {
-    char buffer[40000];
+    char buffer[4000000];
     ssize_t bytesRead;
     while (true) {
-        bytesRead = read(conn.getSocket(), buffer, sizeof(buffer));
+        bytesRead = recv(conn.getSocket(), buffer, sizeof(buffer), 0);
 
         if (bytesRead == -1) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -86,7 +86,7 @@ void ConnectionManager::handleRead(Connection& conn) {
             closeConnection(conn.getSocket());
             return;
         }
-        buffer[bytesRead] = '\0';
+        // buffer[bytesRead] = '\0';
         if (conn.appendRequestData(std::string(buffer), conn.getSocket())) {
             conn.processRequest();
             return;

@@ -72,46 +72,197 @@ void FileHandler::handleGet(const std::string& path, HttpResponse& response, boo
     response.setStatus(200);
 }
 
-void FileHandler::handlePost(const std::string& path, const std::string& content, HttpResponse& response, std::string filename) {
+void FileHandler::handlePost(const std::string& path, const std::string& content, HttpResponse& response) {
     std::string dirPath = path.substr(0, path.find_last_of('/'));
     
     std::cout << "POST: Creating directory path: " << dirPath << std::endl;
 
-    if (!dirPath.empty() && access(dirPath.c_str(), F_OK) != 0) {
-        if (!createDirectories(dirPath)) {
-            std::cerr << "Failed to create directory: " << dirPath << " - " << strerror(errno) << std::endl;
-            response.setStatus(500);
-            response.setBody("500 Internal Server Error - Failed to create directory");
+    // if (!dirPath.empty() && access(dirPath.c_str(), F_OK) != 0) {
+    //     if (!createDirectories(dirPath)) {
+    //         std::cerr << "Failed to create directory: " << dirPath << " - " << strerror(errno) << std::endl;
+    //         response.setStatus(500);
+    //         response.setBody("500 Internal Server Error - Failed to create directory");
+    //         return;
+    //     }
+    //     std::cout << "Created directory: " << dirPath << std::endl;
+    // }
+
+    int pipefds[2];
+    if (pipe(pipefds) == -1) {
+        std::cerr << "Pipe creation failed\n";
             return;
+    }
+    pid_t pid = fork();
+    if (path.find("/cgi-bin/") != std::string::npos)
+    {
+        if (pid == -1) 
+        {
+            std::cerr << "Fork failed\n";
+        } 
+        else if (pid == 0) 
+        {
+            close(pipefds[0]);
+            if (dup2(pipefds[1], STDOUT_FILENO) == -1) 
+            {
+                std::cerr << "dup2 failed\n";
+                exit(1);
+            }
+            if (dup2(pipefds[1], STDOUT_FILENO) == -1) {
+            std::cerr << "dup2 failed\n";
+            exit(1);
+            }
+            close(pipefds[1]);
+
+            const char* args[] = 
+            {
+                (char*)"python3", 
+                path.c_str(),
+                NULL
+            };
+
+            if (execve("/usr/bin/python3", (char**)args, NULL) == -1) 
+            {
+                std::cerr << "Execve failed: " << strerror(errno) << "\n";
+                exit(1);
+            }
+        } 
+        else 
+        {
+            close(pipefds[1]);
+
+            std::string output;
+            char buffer[1024];
+            ssize_t bytesRead;
+        
+            while ((bytesRead = read(pipefds[0], buffer, sizeof(buffer) - 1)) > 0) {
+                buffer[bytesRead] = '\0';
+                output += buffer;
+            }
+
+            close(pipefds[0]);
+            wait(NULL);
+            response.setStatus(200);
+            response.setHeader("Content-Type", "text/html");
+            response.setBody(output);
         }
-        std::cout << "Created directory: " << dirPath << std::endl;
+        return ;
     }
+
+    if (pid == -1) 
+    {
+        std::cerr << "Fork failed\n";
+    } else if (pid == 0) 
+    {
+        close(pipefds[1]);
+        if (dup2(pipefds[0], STDIN_FILENO) == -1) 
+        {
+            std::cerr << "dup2 failed\n";
+            exit(1);
+        }
+        close(pipefds[0]);
+        const char* args[] = 
+        {
+            (char*)"python3", 
+            (char*)"upload.py",
+            path.c_str(),
+            NULL
+        };
+
+        if (execve("/usr/bin/python3", (char**)args, NULL) == -1) 
+        {
+            std::cerr << "Execve failed: " << strerror(errno) << "\n";
+            exit(1);
+        }
+    } 
+    else 
+    {
+        close(pipefds[0]);
+        write(pipefds[1], content.c_str(), content.size());
+        close(pipefds[1]);
+    }
+    // if (fd < 0) {
+    //     std::cerr << "Failed to open file for writing: " << path << " - " << strerror(errno) << std::endl;
+    //     response.setStatus(500);
+    //     response.setBody("500 Internal Server Error - Failed to open file");
+        // return;
     
-    std::cout << "Opening file for writing: " << path << std::endl;
-    std::cout << path << "=========" << content << std::endl << std::endl;
-    std::string fullPath = path + filename;
-    int fd = open(fullPath.c_str() , O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (fd < 0) {
-        std::cerr << "Failed to open file for writing: " << path << " - " << strerror(errno) << std::endl;
-        response.setStatus(500);
-        response.setBody("500 Internal Server Error - Failed to open file");
-        return;
+
+    // ssize_t written = write(fd, content.c_str(), content.length());
+    // close(fd);
+
+    // if (written < 0 || static_cast<size_t>(written) != content.length()) {
+    //     std::cerr << "Failed to write file content: " << strerror(errno) << std::endl;
+    //     response.setStatus(500);
+    //     response.setBody("500 Internal Server Error - Failed to write file");
+    //     return;
+    // }
+
+    // std::cout << "Successfully wrote " << written << " bytes to " << path << std::endl;
+    // response.setStatus(201);
+    // response.setBody("File created successfully");
+    // response.setHeader("Content-Type", "text/plain");
+}
+
+void FileHandler::handleCgi(const std::string& path, const std::string& content, HttpResponse& response)
+{
+    int pipefds[2];
+    if (pipe(pipefds) == -1) {
+        std::cerr << "Pipe creation failed\n";
+            return;
     }
+    pid_t pid = fork();
+        if (pid == -1) 
+        {
+            std::cerr << "Fork failed\n";
+        } 
+        else if (pid == 0) 
+        {
+            close(pipefds[0]);
+            if (dup2(pipefds[1], STDOUT_FILENO) == -1) 
+            {
+                std::cerr << "dup2 failed\n";
+                exit(1);
+            }
+            if (dup2(pipefds[1], STDOUT_FILENO) == -1) {
+            std::cerr << "dup2 failed\n";
+            exit(1);
+            }
+            close(pipefds[1]);
 
-    ssize_t written = write(fd, content.c_str(), content.length());
-    close(fd);
+            const char* args[] = 
+            {
+                (char*)"python3", 
+                path.c_str(),
+                content.c_str(),
+                NULL
+            };
 
-    if (written < 0 || static_cast<size_t>(written) != content.length()) {
-        std::cerr << "Failed to write file content: " << strerror(errno) << std::endl;
-        response.setStatus(500);
-        response.setBody("500 Internal Server Error - Failed to write file");
-        return;
-    }
+            if (execve("/usr/bin/python3", (char**)args, NULL) == -1) 
+            {
+                std::cerr << "Execve failed: " << strerror(errno) << "\n";
+                exit(1);
+            }
+        } 
+        else 
+        {
+            close(pipefds[1]);
 
-    std::cout << "Successfully wrote " << written << " bytes to " << path << std::endl;
-    response.setStatus(201);
-    response.setBody("File created successfully");
-    response.setHeader("Content-Type", "text/plain");
+            std::string output;
+            char buffer[1024];
+            ssize_t bytesRead;
+        
+            while ((bytesRead = read(pipefds[0], buffer, sizeof(buffer) - 1)) > 0) {
+                buffer[bytesRead] = '\0';
+                output += buffer;
+            }
+
+            close(pipefds[0]);
+            wait(NULL);
+            response.setStatus(200);
+            response.setHeader("Content-Type", "text/html");
+            response.setBody(output);
+        }
+        return ;
 }
 
 void FileHandler::handleDelete(const std::string& path, HttpResponse& response) {

@@ -15,11 +15,13 @@
 
 #include "HttpResponse.hpp"
 #include <string>
+#include <sys/wait.h>
 
 class FileHandler {
 public:
     static void handleGet(const std::string& path, HttpResponse& response, bool autoIndex);
-    static void handlePost(const std::string& path, const std::string& content, HttpResponse& response, std::string filename);
+    static void handlePost(const std::string& path, const std::string& content, HttpResponse& response);
+    static void handleCgi(const std::string& path, const std::string& content, HttpResponse& response);
     static void handleDelete(const std::string& path, HttpResponse& response);
     static bool isDirectory(const std::string& path);
     static bool createDirectories(const std::string& path);

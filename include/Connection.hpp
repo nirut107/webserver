@@ -19,6 +19,18 @@
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
 #include <fstream> 
+#include <sys/socket.h>
+#include <sstream>
+#include <iostream>
+#include <string>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <cstring>
+#include <cstdlib>
+#include <fcntl.h>
+#include <sys/wait.h>
+
 
 class Connection {
 	private:
