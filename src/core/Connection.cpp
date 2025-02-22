@@ -63,10 +63,11 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
     requestBuffer += data;
     std::istringstream  stream(requestBuffer);
     std::string         line;
+    std::cout << data << "data\n\n\n\n";
 
     if (!std::getline(stream, line)) {
         std::cerr << "Failed to read request line" << std::endl;
-        return false;
+        return true;
     }
     if (line.find("POST") == std::string::npos)
     {
@@ -91,17 +92,34 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
     std::cout << "\n" << content_length << "content_length\n";
     if (content_length == -1) {
         std::cerr << "Missing Content-Length header" << std::endl;
-        return false;
+        return true;
+    }
+    
+    char buffer[4000000];
+    ssize_t bytesRead;
+    std::vector<char> requestBuffers;
+    
+    requestBuffers.insert(requestBuffers.end(), data.begin(), data.end());
+
+    std::ofstream ofs("uploaded.bin", std::ios::binary | std::ios::trunc);
+    if (!ofs) {
+        throw std::runtime_error("Failed to open file for writing.");
     }
 
-    std::size_t body_start = header_end + 4; 
-    std::size_t received_body_size = requestBuffer.size() - body_start;
-    if (received_body_size < static_cast<size_t>(content_length)) {
-        std::cout << "Waiting for more body data...\n";
-        return false;
+    size_t received_body_size = data.size() - header_end + 4;
+    while (received_body_size < content_length) {
+        bytesRead = recv(socket, buffer, sizeof(buffer), 0);
+    
+        if (bytesRead > 0)
+        {
+            requestBuffers.insert(requestBuffers.end(), buffer, buffer + bytesRead);
+            received_body_size += bytesRead;
+        }
     }
-    std::string body = requestBuffer.substr(body_start, content_length);
-    std::cout << "Received POST body:\n" << body << std::endl;
+
+    std::cout << "check content_length :: received_body_size "<< content_length << " :: "<< received_body_size << "\n";
+    ofs.write(requestBuffers.data(), requestBuffers.size());
+    ofs.close();
     return true;
 }
 
@@ -131,46 +149,38 @@ void Connection::processRequest() {
                         response.setStatus(413);
                         response.setBody(HttpResponse::getDefaultErrorPage(413));
                     } else if (httpRequest.getMethod() == "GET") {
+                        std::cout << "GETss\n " << httpRequest.getPath() << raw;
                         if (httpRequest.getPath() == route->path)
                         {
                             FileHandler::handleGet(route->root + "/" + route->index, response, route->autoIndex);
+                        }
+                        else if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
+                        {
+                            std::string pathWithCgi = httpRequest.getPath();
+                            while (pathWithCgi.find("/cgi-bin") != std::string::npos)
+                            {
+                                pathWithCgi = pathWithCgi.substr(route->path.length());
+                            } 
+                            std::string cgiPath = route->root + pathWithCgi;
+                            std::cout << " Run cgi with path " << cgiPath << std::endl;
+                            FileHandler::handleCgi(cgiPath, raw, response);
                         }
                         else
                         {
                             FileHandler::handleGet(route->root + httpRequest.getPath(), response, route->autoIndex);
                         }
                     } else if (httpRequest.getMethod() == "POST") {
-
-                        FILE* pipe = popen("python3 ./upload.py", "w");
-                        if (!pipe) {
-                            std::cerr << "Failed to open pipe to Python script\n";
-                        }
-                        fwrite(raw.c_str(), 1, raw.size(), pipe);
-                        pclose(pipe);
-
                         std::string uploadPath;
                         if (route->uploadStore.empty()) {
-                            uploadPath = route->root + httpRequest.getPath();
-                            std::cout << "Using root path for upload: " << uploadPath << std::endl;
-                        } else {
-                            std::string filename = httpRequest.getPath();
-                            if (filename.find(route->path) == 0) {
-                                filename = filename.substr(route->path.length());
-                            }
-                            if (!filename.empty() && filename[0] == '/') {
-                                filename = filename.substr(1);
-                            }
-                            if (!FileHandler::createDirectories(route->uploadStore)) {
-                                std::cerr << "Failed to create upload directory: " << route->uploadStore << std::endl;
-                                response.setStatus(500);
-                                response.setBody(HttpResponse::getDefaultErrorPage(500));
-                                return;
-                            }
-                            uploadPath = route->uploadStore + "/" + filename;
-                            std::cout << "Using upload store path: " << uploadPath << std::endl;
+                            uploadPath = route->root;
+                        } 
+                        else 
+                        {
+                            uploadPath = route->uploadStore;
+                            std::cout << "Using upload store pathaaaa: " << uploadPath << std::endl;
                         }
                         std::cout << "Request body size: " << httpRequest.getBody().length() << std::endl;
-                        FileHandler::handlePost(uploadPath, requestBuffer, response, "file");
+                        FileHandler::handlePost(uploadPath, raw, response);
                     } else if (httpRequest.getMethod() == "DELETE") {
                         std::string deletePath;
                         if (route->uploadStore.empty()) {
@@ -184,7 +194,9 @@ void Connection::processRequest() {
                                 filename = filename.substr(1);
                             }
                             deletePath = route->uploadStore + "/" + filename;
+                            std::cout << deletePath << "delete\n\n";
                         }
+                        
                         std::cout << "Using delete path: " << deletePath << std::endl;
                         FileHandler::handleDelete(deletePath, response);
                     } else {

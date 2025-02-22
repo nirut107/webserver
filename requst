@@ -1,3 +1,47 @@
-WebKitFormBoundarycDhtGuemQoicnYfY
-Content-Disposition: form-data; name="file"; filename="400.html"
-Content-Type: text/html
+POST /www/cgi-bin/your-cgi-script HTTP/1.1
+Host: localhost:9081
+Connection: keep-alive
+Content-Length: 13
+Cache-Control: max-age=0
+sec-ch-ua: "Chromium";v="130", "Google Chrome";v="130", "Not?A_Brand";v="99"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "Linux"
+Origin: http://localhost:9081
+Content-Type: application/x-www-form-urlencoded
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Referer: http://localhost:9081/api
+Accept-Encoding: gzip, deflate, br, zstd
+Accept-Language: th,en;q=0.9,fr;q=0.8
+
+x=aaaa&y=aaaa
+
+
+POST /uploads HTTP/1.1
+Host: localhost:9081
+Connection: keep-alive
+Content-Length: 144
+sec-ch-ua-platform: "Linux"
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36
+sec-ch-ua: "Chromium";v="130", "Google Chrome";v="130", "Not?A_Brand";v="99"
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryzJXlcewUIiBIBoBn
+sec-ch-ua-mobile: ?0
+Accept: */*
+Origin: http://localhost:9081
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: cors
+Sec-Fetch-Dest: empty
+Referer: http://localhost:9081/index.html
+Accept-Encoding: gzip, deflate, br, zstd
+Accept-Language: th,en;q=0.9,fr;q=0.8
+
+------WebKitFormBoundaryzJXlcewUIiBIBoBn
+Content-Disposition: form-data; name="file"
+
+undefined
+------WebKitFormBoundaryzJXlcewUIiBIBoBn--
