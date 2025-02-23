@@ -2,18 +2,23 @@
 
 import sys
 import re
-import os
-
 
 def process_uploaded_bin():
 
     post_data = sys.argv[1]
+    request_line = post_data.split("\n")[0]
 
     pattern = r'[?&]x=([^&\s]+)'
+    match = re.search(pattern, request_line)
 
-    # Search for the pattern in the request string
-    match = re.search(pattern, post_data)
-    x_value = match.group(1)
+    x_value = ""
+    if match:
+        x_value = match.group(1)
+        if not x_value:
+            x_value = "Unknownn"
+    else:
+        x_value = "Unknown"
+
 
     print(f"""
     <!DOCTYPE html>
@@ -165,8 +170,6 @@ def process_uploaded_bin():
                     <input type="text" placeholder="input your name" name="x">
                     <button type="submit" class="button">Say Hi</button>
                 </form>
-                <div id="uploadResponse"></div>
-                
             </div>
             <a href="/index.html">Go back to Home</a>
         </div>
@@ -174,6 +177,7 @@ def process_uploaded_bin():
     </body>
     </html>
     """)
+    sys.exit(0)
 
 if __name__ == "__main__":
     process_uploaded_bin()

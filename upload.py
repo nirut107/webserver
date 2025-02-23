@@ -18,14 +18,11 @@ def parse_multipart_data(bin_data, boundary):
                 content_disposition = [line for line in headers.split(b'\r\n') if b"Content-Disposition" in line][0]
                 filename = content_disposition.split(b'filename="')[1].split(b'"')[0].decode('utf-8')
                 files.append((filename, body))
-    
     return files
 
 def process_uploaded_bin(file_path):
     
     upload_path = sys.argv[1]
-    """ Function to read uploaded.bin and recreate uploaded files """
-    
     with open(file_path, 'rb') as f:
         bin_data = f.read()
 
@@ -33,11 +30,13 @@ def process_uploaded_bin(file_path):
     boundary_start = bin_data.find(b'boundary=')
     if boundary_start == -1:
         print("Error: Boundary not found")
-        return
+        sys.exit(1)
     
     boundary = bin_data[boundary_start + 9:].split(b'\r\n')[0].decode('utf-8')
     
     files = parse_multipart_data(bin_data, boundary)
+    if (files == []):
+        sys.exit(5)
     
     upload_dir = os.path.join(os.path.dirname(__file__), upload_path)
     os.makedirs(upload_dir, exist_ok=True)
@@ -50,6 +49,7 @@ def process_uploaded_bin(file_path):
         print(f"File {filename} successfully saved to {file_paths}")
     
     os.remove(file_path)
+    sys.exit(0)
 
 if __name__ == "__main__":
     process_uploaded_bin("uploaded.bin")

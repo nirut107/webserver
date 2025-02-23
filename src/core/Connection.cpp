@@ -63,7 +63,6 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
     requestBuffer += data;
     std::istringstream  stream(requestBuffer);
     std::string         line;
-    std::cout << data << "data\n\n\n\n";
 
     if (!std::getline(stream, line)) {
         std::cerr << "Failed to read request line" << std::endl;
@@ -129,12 +128,10 @@ void Connection::processRequest() {
     std::string raw = requestBuffer;
     while ((pos = requestBuffer.find("\r\n\r\n")) != std::string::npos) {
         std::string request = requestBuffer.substr(0, pos + 4);
-        std::cout << "\n\nrequest---\n\n" << requestBuffer << "\n\n";
         requestBuffer = requestBuffer.substr(pos + 4);
         HttpRequest httpRequest;
         if (httpRequest.parse(request)) {
             std::cout << "\nProcessing request: " << httpRequest.getMethod() << " " << httpRequest.getPath() << std::endl;
-            
             HttpResponse response;
             const RouteConfig* route = Router::findRoute(*config, httpRequest.getPath());
             
@@ -149,7 +146,6 @@ void Connection::processRequest() {
                         response.setStatus(413);
                         response.setBody(HttpResponse::getDefaultErrorPage(413));
                     } else if (httpRequest.getMethod() == "GET") {
-                        std::cout << "GETss\n " << httpRequest.getPath() << raw;
                         if (httpRequest.getPath() == route->path)
                         {
                             FileHandler::handleGet(route->root + "/" + route->index, response, route->autoIndex);
