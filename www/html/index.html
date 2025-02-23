@@ -53,6 +53,10 @@
             position: relative;
         }
 
+        p {
+            margin-bottom: 10px;
+        }
+
         h1 {
             text-align: center;
             color: #7EB6FF;
@@ -200,7 +204,7 @@
     <script>
         async function testGet() {
             try {
-                const path = document.getElementById('getPath').value || 'test.txt';
+                const path = document.getElementById('getPath').value;
                 const response = await fetch('/' + path);
                 const text = await response.text();
                 document.getElementById('getResponse').innerHTML = `Response: ${text}`;
