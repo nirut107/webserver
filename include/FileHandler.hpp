@@ -19,7 +19,7 @@
 
 class FileHandler {
 public:
-    static void handleGet(const std::string& path, HttpResponse& response, bool autoIndex);
+    static void handleGet(const std::string& path, HttpResponse& response, bool autoIndex, std::string rootPath);
     static void handlePost(const std::string& path, const std::string& content, HttpResponse& response);
     static void handleCgi(const std::string& path, const std::string& content, HttpResponse& response);
     static void handleDelete(const std::string& path, HttpResponse& response);
@@ -27,7 +27,7 @@ public:
     static bool createDirectories(const std::string& path);
 
 private:
-    static std::string generateDirectoryListing(const std::string& path);
+    static std::string generateDirectoryListing(const std::string& path, std::string rootPath);
     static std::string getMimeType(const std::string& path);
 };
 

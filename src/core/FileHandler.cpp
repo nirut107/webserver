@@ -24,7 +24,7 @@
 #include <iostream>
 #include <fcntl.h>
 
-void FileHandler::handleGet(const std::string& path, HttpResponse& response, bool autoIndex) {
+void FileHandler::handleGet(const std::string& path, HttpResponse& response, bool autoIndex, std::string rootPath) {
     struct stat st;
     if (stat(path.c_str(), &st) != 0) {
         response.setStatus(404);
@@ -40,7 +40,7 @@ void FileHandler::handleGet(const std::string& path, HttpResponse& response, boo
             response.setBody(HttpResponse::getDefaultErrorPage(403));
             return;
         }
-        response.setBody(generateDirectoryListing(path));
+        response.setBody(generateDirectoryListing(path, rootPath));
         response.setHeader("Content-Type", "text/html");
         response.setStatus(200);
         return;
@@ -271,20 +271,91 @@ bool FileHandler::isDirectory(const std::string& path) {
     return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
 }
 
-std::string FileHandler::generateDirectoryListing(const std::string& path) {
+std::string FileHandler::generateDirectoryListing(const std::string& path, std::string rootPath) {
     DIR* dir = opendir(path.c_str());
     if (!dir) {
         return "";
     }
 
     std::ostringstream html;
-    html << "<!DOCTYPE html>\n<html><head><title>Directory listing for " << path << "</title>"
-         << "<style>body{font-family:Arial,sans-serif;margin:40px;line-height:1.6}"
-         << "table{width:100%;border-collapse:collapse;margin-top:20px}"
-         << "th,td{padding:8px;text-align:left;border-bottom:1px solid #ddd}"
-         << "tr:hover{background-color:#f5f5f5}</style></head>"
-         << "<body><h1>Directory listing for " << path << "</h1>"
-         << "<table><tr><th>Name</th><th>Size</th><th>Last Modified</th></tr>";
+    html << "<!DOCTYPE html>\n";
+    html << "<html lang=\"en\">\n";
+    html << "<head>\n";
+    html << "    <meta charset=\"UTF-8\">\n";
+    html << "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
+    html << "    <title >Directory listing for " << path << "</title>\n";
+    html << "    <style>\n";
+    html << "        * { margin: 0; padding: 0; box-sizing: border-box; }\n";
+    html << "        body {\n";
+    html << "            font-family: 'Arial', sans-serif;\n";
+    html << "            background: linear-gradient(to bottom, #0B1026 0%, #1B2735 50%, #090A0F 100%);\n";
+    html << "            color: #fff;\n";
+    html << "            min-height: 100vh;\n";
+    html << "            padding: 20px;\n";
+    html << "            position: relative;\n";
+    html << "            overflow-x: hidden;\n";
+    html << "        }\n";
+    html << "        table {\n";
+    html << "            width: 100%;\n";
+    html << "            border-collapse: collapse;\n";
+    html << "            margin-top: 20px;\n";
+    html << "            box-shadow: 0 0 15px rgba(126, 182, 255, 0.3);\n";
+    html << "            background: rgba(255, 255, 255, 0.05);\n";
+    html << "            border-radius: 10px;\n";
+    html << "            overflow: hidden;\n";
+    html << "        }\n";
+    html << "        th, td {\n";
+    html << "            width: 30%;\n";
+    html << "            padding: 12px;\n";
+    html << "            text-align: left;\n";
+    html << "            border-bottom: 1px solid rgba(255, 255, 255, 0.2);\n";
+    html << "        }\n";
+    html << "        th {\n";
+    html << "            background: rgba(255, 255, 255, 0.1);\n";
+    html << "            color: #7EB6FF;\n";
+    html << "            text-transform: uppercase;\n";
+    html << "        }\n";
+    html << "        .container { max-width: 800px; margin: 0 auto; position: relative; magin-top: 30px;}\n";
+    html << "        .ti { text-align: center;}\n";
+    html << "        .back { text-align: right; margin-top: 20px;}\n";
+    html << "        body::before {\n";
+    html << "            content: '';\n";
+    html << "            position: absolute;\n";
+    html << "            width: 100%; height: 100%; top: 0; left: 0;\n";
+    html << "            background-image:\n";
+    html << "                radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),\n";
+    html << "                radial-gradient(2px 2px at 40px 70px, #ffffff, rgba(0,0,0,0)),\n";
+    html << "                radial-gradient(2px 2px at 50px 160px, #ffffff, rgba(0,0,0,0)),\n";
+    html << "                radial-gradient(2px 2px at 90px 40px, #ffffff, rgba(0,0,0,0)),\n";
+    html << "                radial-gradient(2px 2px at 130px 80px, #ffffff, rgba(0,0,0,0));\n";
+    html << "            background-repeat: repeat;\n";
+    html << "            animation: twinkle 5s infinite linear;\n";
+    html << "            z-index: -1;\n";
+    html << "        }\n";
+    html << "        @keyframes twinkle {\n";
+    html << "            from { transform: translateY(0); }\n";
+    html << "            to { transform: translateY(-100px); }\n";
+    html << "        }\n";
+    html << "        a {\n";
+    html << "            color: #7EB6FF;\n";
+    html << "            text-decoration: none;\n";
+    html << "            transition: all 0.3s ease;\n";
+    html << "        }\n";
+    html << "        a:hover {\n";
+    html << "            color: #ffffff;\n";
+    html << "            text-shadow: 0 0 10px rgba(126, 182, 255, 0.5);\n";
+    html << "        }\n";
+    html << "        @keyframes float {\n";
+    html << "            0% { transform: translateY(0px) rotate(0deg); }\n";
+    html << "            50% { transform: translateY(-20px) rotate(5deg); }\n";
+    html << "            100% { transform: translateY(0px) rotate(0deg); }\n";
+    html << "        }\n";
+    html << "    </style>\n";
+    html << "</head>\n";
+    html << "<body>\n";
+    html << "    <div class=\"container\">\n";
+    html << "       <h1 class=\"ti\">Directory listing for " <<  path << "</h1>\n";
+
 
     struct dirent* entry;
     while ((entry = readdir(dir)) != NULL) {
@@ -292,15 +363,30 @@ std::string FileHandler::generateDirectoryListing(const std::string& path) {
         if (name == "." || name == "..") continue;
 
         struct stat st;
+        std::string herfPath;
+
+        if (rootPath == "/"){
+            herfPath = name;
+        }
+        else {
+            herfPath = rootPath + "/" + name;
+        }
         std::string fullPath = path + "/" + name;
         if (stat(fullPath.c_str(), &st) == 0) {
-            html << "<tr><td><a href=\"" << name << "\">" << name << "</a></td>"
+            html << "<table><tr><td><a href=\"" << herfPath<< "\">" << name << "</a></td>"
                 << "<td>" << st.st_size << " bytes</td>"
                 << "<td>" << ctime(&st.st_mtime) << "</td></tr>";
+                
         }
+        
     }
-
-    html << "</table></body></html>";
+    size_t lastSlash = rootPath.find_last_of('/');
+    if (lastSlash != std::string::npos && rootPath != "/") {
+        rootPath = rootPath.substr(0, lastSlash + 1);
+    }
+    html << "</table>\n";
+    html << "<div class=\"back\"><a  href=\"" << rootPath << "\"> Back</a><div></div>\n";
+    html << "</body></html>";
     closedir(dir);
     return html.str();
 }
