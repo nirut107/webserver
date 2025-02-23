@@ -140,7 +140,7 @@ void Server::handleRequest(int clientSocket, const RouteConfig* route) {
 
         std::cout << "Processing request..." << std::endl;
         if (request.getMethod() == "GET") {
-            FileHandler::handleGet(route->root + request.getPath(), response, route->autoIndex);
+            FileHandler::handleGet(route->root + request.getPath(), response, route->autoIndex, route->path);
         } else if (request.getMethod() == "POST") {
             std::string uploadPath;
             if (route->uploadStore.empty()) {

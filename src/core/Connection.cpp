@@ -134,12 +134,12 @@ void Connection::processRequest() {
             std::cout << "\nProcessing request: " << httpRequest.getMethod() << " " << httpRequest.getPath() << std::endl;
             HttpResponse response;
             const RouteConfig* route = Router::findRoute(*config, httpRequest.getPath());
-            
             if (route) {
                 std::cout << "Found route with path: " << route->path << std::endl;
                 std::cout << "Route upload store: " << route->uploadStore << std::endl;
                 
                 try {
+                    std::cout << "\n" <<  route->clientMaxBodySize << "==== check MAX NOT TRUE \n" << httpRequest.getContentLength();
                     if (httpRequest.getContentLength() > route->clientMaxBodySize) {
                         std::cerr << "Content length " << httpRequest.getContentLength() 
                                 << " exceeds max body size " << route->clientMaxBodySize << std::endl;
@@ -148,7 +148,7 @@ void Connection::processRequest() {
                     } else if (httpRequest.getMethod() == "GET") {
                         if (httpRequest.getPath() == route->path)
                         {
-                            FileHandler::handleGet(route->root + "/" + route->index, response, route->autoIndex);
+                            FileHandler::handleGet(route->root + "/" + route->index, response, route->autoIndex, route->path);
                         }
                         else if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
                         {
@@ -163,7 +163,12 @@ void Connection::processRequest() {
                         }
                         else
                         {
-                            FileHandler::handleGet(route->root + httpRequest.getPath(), response, route->autoIndex);
+                            std::string pathForGet = httpRequest.getPath();
+                            while (route->path != "/" && pathForGet.find(route->path) != std::string::npos)
+                            {
+                                pathForGet = pathForGet.substr(route->path.length());
+                            }
+                            FileHandler::handleGet(route->root + pathForGet, response, route->autoIndex, route->path);
                         }
                     } else if (httpRequest.getMethod() == "POST") {
                         std::string uploadPath;
@@ -192,7 +197,6 @@ void Connection::processRequest() {
                             deletePath = route->uploadStore + "/" + filename;
                             std::cout << deletePath << "delete\n\n";
                         }
-                        
                         std::cout << "Using delete path: " << deletePath << std::endl;
                         FileHandler::handleDelete(deletePath, response);
                     } else {

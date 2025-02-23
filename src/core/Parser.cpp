@@ -154,6 +154,7 @@ std::vector<ServerConfig> Parser::parseConfig(const std::string &filePath) {
 					std::getline(errorStream, page);
 					current.errorPages[std::atoi(code.c_str())] = trim(page);
 				} else if (directive == "client_max_body_size") {
+					
 					current.clientMaxBodySize = static_cast<size_t>(std::atoi(value.c_str()));
 				}
 			} else {
