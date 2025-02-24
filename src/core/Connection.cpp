@@ -135,23 +135,26 @@ void Connection::processRequest() {
             HttpResponse response;
             const RouteConfig* route = Router::findRoute(*config, httpRequest.getPath());
 
-            // 405 Method Not Allowed
-            bool    found = false; 
-            for( std::vector<std::string>::const_iterator it = route->methods.begin(); it != route->methods.end(); ++it  )
-            {
-                  if( httpRequest.getMethod() ==  *it)
-                  { 
-                    found = true;
-                    break;
-                  }
-            }
+            
             
             
             if (route) {
                 std::cout << "Found route with path: " << route->path << std::endl;
                 std::cout << "Route upload store: " << route->uploadStore << std::endl;
+
                 
                 try {
+
+                    // 405 Method Not Allowed
+                    bool    found = false; 
+                    for( std::vector<std::string>::const_iterator it = route->methods.begin(); it != route->methods.end(); ++it  )
+                    {
+                        if( httpRequest.getMethod() ==  *it)
+                        { 
+                            found = true;
+                            break;
+                        }
+                    }
                     
                     std::cout << "\n" <<  route->clientMaxBodySize << "==== check MAX NOT TRUE \n" << httpRequest.getContentLength();
                     if(!found)
