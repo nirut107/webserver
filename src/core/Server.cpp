@@ -275,7 +275,6 @@ void Server::run() {
                 }
             }
         }
-        
         connectionManager.checkTimeouts();
     }
 }

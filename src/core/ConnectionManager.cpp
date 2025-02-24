@@ -68,7 +68,7 @@ Connection* ConnectionManager::getConnection(int socket) {
 }
 
 void ConnectionManager::handleRead(Connection& conn) {
-    char buffer[4000000];
+    char buffer[40000];
     ssize_t bytesRead;
     while (true) {
         bytesRead = recv(conn.getSocket(), buffer, sizeof(buffer), 0);

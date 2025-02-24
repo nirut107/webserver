@@ -23,6 +23,7 @@
 #include <sstream>
 #include <iostream>
 #include <string>
+#include <cctype>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
