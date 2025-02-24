@@ -55,21 +55,23 @@ void printConfig(const std::vector<ServerConfig>& servers) {
 }
 
 int main(int argc, char* argv[]) {
+
+
+
 	try {
 		std::string configPath = (argc > 1) ? argv[1] : "config/default.conf";
-		Parser parser;
+		Parser parser;			
 		std::vector<ServerConfig> servers = parser.parseConfig(configPath);
-		
+
 		if (argc > 2 && std::string(argv[2]) == "-t") {
 			printConfig(servers);
 			return 0;
 		}
-		
 		Server server;
 		server.start(servers);
 		server.run();
+				
 		
-		return 0;
 	} catch (const std::exception& e) {
 		std::cerr << "Error: " << e.what() << std::endl;
 		return 1;
