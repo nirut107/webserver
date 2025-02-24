@@ -126,17 +126,19 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
 void Connection::processRequest() {
     size_t pos;
     std::string raw = requestBuffer;
+
     while ((pos = requestBuffer.find("\r\n\r\n")) != std::string::npos) {
+
         std::string request = requestBuffer.substr(0, pos + 4);
         requestBuffer = requestBuffer.substr(pos + 4);
+
         HttpRequest httpRequest;
+
         if (httpRequest.parse(request)) {
             std::cout << "\nProcessing request: " << httpRequest.getMethod() << " " << httpRequest.getPath() << std::endl;
+
             HttpResponse response;
             const RouteConfig* route = Router::findRoute(*config, httpRequest.getPath());
-
-            
-            
             
             if (route) {
                 std::cout << "Found route with path: " << route->path << std::endl;
@@ -162,7 +164,6 @@ void Connection::processRequest() {
                         std::cout << "\t\tNOT FOUND" << std::endl;
                         response.setStatus(405);
                         response.setBody(HttpResponse::getDefaultErrorPage(405));
-                        // return ; 
                     } else if (httpRequest.getContentLength() > route->clientMaxBodySize) {
                         std::cerr << "Content length " << httpRequest.getContentLength() 
                                 << " exceeds max body size " << route->clientMaxBodySize << std::endl;
@@ -201,7 +202,7 @@ void Connection::processRequest() {
                         else 
                         {
                             uploadPath = route->uploadStore;
-                            std::cout << "Using upload store pathaaaa: " << uploadPath << std::endl;
+                            std::cout << "Using upload store path: " << uploadPath << std::endl;
                         }
                         std::cout << "Request body size: " << httpRequest.getBody().length() << std::endl;
                         FileHandler::handlePost(uploadPath, raw, response);

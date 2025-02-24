@@ -214,7 +214,27 @@ void FileHandler::handleCgi(const std::string& path, const std::string& content,
     else {
         close(pipefds[1]);
         int status;
-        waitpid(pid, &status, 0);
+        int timeout = 5;
+        
+        time_t startTime = time(NULL);
+        bool finished = false;
+
+        while (true) {
+            pid_t result = waitpid(pid, &status, WNOHANG);
+            if (result == pid) {
+                finished = true;
+                break;
+            } else if (result == 0) { 
+                if (time(NULL) - startTime > timeout) {
+                    kill(pid, SIGKILL);
+                    waitpid(pid, &status, 0);
+                    break;
+                }
+                usleep(100000);
+            } else {
+                break;
+            }
+        }
 
         std::string output;
         char buffer[1024];
@@ -227,12 +247,11 @@ void FileHandler::handleCgi(const std::string& path, const std::string& content,
 
         close(pipefds[0]);
 
-        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+        if (finished && WIFEXITED(status) && WEXITSTATUS(status) == 0) {
             response.setStatus(200);
             response.setHeader("Content-Type", "text/html");
             response.setBody(output);
         } else {
-            std::cout << WIFEXITED(status) << " " << WEXITSTATUS(status) << output;
             response.setStatus(500);
             response.setHeader("Content-Type", "text/html");
             response.setBody(HttpResponse::getDefaultErrorPage(500));
