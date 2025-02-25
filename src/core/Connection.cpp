@@ -237,7 +237,13 @@ void Connection::processRequest() {
                                 << " exceeds max body size " << route->clientMaxBodySize << std::endl;
                         response.setStatus(413);
                         response.setBody(HttpResponse::getDefaultErrorPage(413));
-                    }  else if (httpRequest.getMethod() == "GET") {
+                    
+
+                    
+                    } else if (httpRequest.getPath().find("cookies") != std::string::npos) {
+                        // FileHandler::handleCookies();
+
+                    } else if (httpRequest.getMethod() == "GET") {
                         if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
                         {
                             FileHandler::handleCgi(*route, response, httpRequest, requestBodyBin);
