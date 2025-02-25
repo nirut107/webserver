@@ -212,7 +212,8 @@ void Connection::processRequest() {
             if (route) {
                 std::cout << "Found route with path: " << route->path << std::endl;
                 std::cout << "Route upload store: " << route->uploadStore << std::endl;
-               
+
+                
                 
                 try {
 
