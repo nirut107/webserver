@@ -70,6 +70,11 @@ bool HttpRequest::parseHeaders(const std::string& headers) {
         contenttype = itc->second;
     }
 
+    std::map<std::string, std::string>::iterator its = this->headers.find("Cookie");
+    if (its != this->headers.end()) {
+        cookie = its->second;
+    }
+
     return true;
 }
 

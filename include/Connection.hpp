@@ -56,6 +56,7 @@ class Connection {
 		const std::string& getResponse() const;
 		void clearResponse(size_t bytes);
 		bool appendRequestData(const std::string& data, int socket);
+		void setBodyBin(std::vector<char> body, std::string& header);
 		void processRequest();
 		void updateLastActivity();
 };
