@@ -59,6 +59,12 @@ void Connection::clearResponse(size_t bytes) {
     updateLastActivity();
 }
 
+void Connection::setBodyBin(std::vector<char> body, std::string& header)
+{
+    requestBodyBin = body;
+    requestBuffer = header;
+}
+
 bool Connection::appendRequestData(const std::string& data, int socket) {
     requestBuffer += data;
     std::istringstream  stream(requestBuffer);
@@ -146,7 +152,7 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
 
                 size_t filename_pos = header.find("filename=\"");
                 if (filename_pos != std::string::npos) {
-                    filename_pos += 10; // Move past "filename=\""
+                    filename_pos += 10;
                     size_t filename_end = header.find("\"", filename_pos);
                     if (filename_end != std::string::npos) {
                         filename = header.substr(filename_pos, filename_end - filename_pos);
@@ -176,7 +182,7 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
         }
 
         std::vector<char>::iterator content_end = content_start;
-        while (content_end != end - boundary.size()) {
+        while (content_end != end - boundary.size() - 6) {
             if (std::equal(boundary.begin(), boundary.end(), content_end)) {
                 break;
             }
@@ -213,8 +219,6 @@ void Connection::processRequest() {
                 std::cout << "Found route with path: " << route->path << std::endl;
                 std::cout << "Route upload store: " << route->uploadStore << std::endl;
 
-                
-                
                 try {
 
                     bool    found = false; 

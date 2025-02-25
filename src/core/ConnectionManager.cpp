@@ -86,10 +86,26 @@ void ConnectionManager::handleRead(Connection& conn) {
             closeConnection(conn.getSocket());
             return;
         }
-        // buffer[bytesRead] = '\0';
-        if (conn.appendRequestData(std::string(buffer), conn.getSocket())) {
+        
+        std::string raw(buffer, bytesRead);
+        size_t headerEnd = raw.find("\r\n\r\n");
+        std::vector<char> body;
+        std::string headers = raw.substr(0, headerEnd + 4);
+
+        
+        if (headers.size() < raw.size()) {
+            size_t bodyStart = headerEnd + 4;
+            body.assign(buffer + bodyStart, buffer + raw.size());
+            conn.setBodyBin(body, headers);
             conn.processRequest();
-            return;
+            return ;
+        }
+        else
+        {
+            if (conn.appendRequestData(std::string(buffer), conn.getSocket())) {
+                conn.processRequest();
+                return ;
+            }
         }
     }
     if (bytesRead == 0) {
