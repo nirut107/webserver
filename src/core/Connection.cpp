@@ -78,7 +78,8 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
         return false;
     }
     int content_length = -1;
-    
+    std::string boundary;
+
     while (std::getline(stream, line) && line != "\r") {
         if (line.find("Content-Length:") == 0) {
             std::istringstream len_stream(line.substr(15));
@@ -87,38 +88,108 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
                 return false;
             }
         }
+        if (line.find("Content-Type:") == 0) {
+            size_t boundary_pos = line.find("boundary=");
+            if (boundary_pos != std::string::npos) {
+                boundary = line.substr(boundary_pos + 9);
+            }
+        }
     }
-    std::cout << "\n" << content_length << "content_length\n";
+
     if (content_length == -1) {
         std::cerr << "Missing Content-Length header" << std::endl;
         return true;
     }
-    
+
     char buffer[4000000];
     ssize_t bytesRead;
-    std::vector<char> requestBuffers;
-    
-    requestBuffers.insert(requestBuffers.end(), data.begin(), data.end());
-
-    std::ofstream ofs("uploaded.bin", std::ios::binary | std::ios::trunc);
-    if (!ofs) {
-        throw std::runtime_error("Failed to open file for writing.");
-    }
-
     size_t received_body_size = data.size() - header_end + 4;
+    
     while (received_body_size < content_length) {
         bytesRead = recv(socket, buffer, sizeof(buffer), 0);
-    
-        if (bytesRead > 0)
-        {
-            requestBuffers.insert(requestBuffers.end(), buffer, buffer + bytesRead);
+        if (bytesRead > 0) {
+            requestBodyBin.insert(requestBodyBin.end(), buffer, buffer + bytesRead);
             received_body_size += bytesRead;
         }
     }
 
-    std::cout << "check content_length :: received_body_size "<< content_length << " :: "<< received_body_size << "\n";
-    ofs.write(requestBuffers.data(), requestBuffers.size());
-    ofs.close();
+    std::cout << "check content_length :: received_body_size " << content_length << " :: " << received_body_size << "\n";
+
+    if (!boundary.empty() && !requestBodyBin.empty()) {
+        std::vector<char>::iterator it = requestBodyBin.begin();
+        std::vector<char>::iterator end = requestBodyBin.end();
+
+        while (it != end - boundary.size()) {
+            if (std::equal(boundary.begin(), boundary.end(), it)) {
+                break;
+            }
+            ++it;
+        }
+        if (it == end) {
+            std::cerr << "Boundary not found" << std::endl;
+            return false;
+        }
+
+        it += boundary.size();
+        while (it != end && (*it == '\r' || *it == '\n')) {
+            ++it;
+        }
+
+        while (it != end - 20) { 
+            if (std::equal(it, it + 19, "Content-Disposition:")) {
+                std::vector<char>::iterator header_start = it;
+                while (header_start != end && *header_start != '\n') {
+                    ++header_start;
+                }
+
+                std::string header(it, header_start);
+
+                size_t filename_pos = header.find("filename=\"");
+                if (filename_pos != std::string::npos) {
+                    filename_pos += 10; // Move past "filename=\""
+                    size_t filename_end = header.find("\"", filename_pos);
+                    if (filename_end != std::string::npos) {
+                        filename = header.substr(filename_pos, filename_end - filename_pos);
+                        std::cout << "Extracted filename: " << filename << std::endl;
+                    }
+                }
+                break;
+            }
+            ++it;
+        }
+
+        if (filename.empty()) {
+            filename = "default_upload.bin";
+        }
+        std::vector<char>::iterator content_start = it;
+        while (content_start != end - 4) {
+            if (*content_start == '\r' && *(content_start + 1) == '\n' &&
+                *(content_start + 2) == '\r' && *(content_start + 3) == '\n') {
+                content_start += 4;
+                break;
+            }
+            ++content_start;
+        }
+        if (content_start == end) {
+            std::cerr << "File content start not found" << std::endl;
+            return false;
+        }
+
+        std::vector<char>::iterator content_end = content_start;
+        while (content_end != end - boundary.size()) {
+            if (std::equal(boundary.begin(), boundary.end(), content_end)) {
+                break;
+            }
+            ++content_end;
+        }
+
+        if (content_end == end) {
+            std::cerr << "File content end not found" << std::endl;
+            return false;
+        }
+        std::vector<char> clean_body(content_start, content_end);
+        requestBodyBin.swap(clean_body);
+    }
     return true;
 }
 
@@ -138,16 +209,15 @@ void Connection::processRequest() {
             std::cout << "\nProcessing request: " << httpRequest.getMethod() << " " << httpRequest.getPath() << std::endl;
 
             HttpResponse response;
-            const RouteConfig* route = Router::findRoute(*config, httpRequest.getPath());
             
+            const RouteConfig* route = Router::findRoute(*config, httpRequest.getPath());
             if (route) {
                 std::cout << "Found route with path: " << route->path << std::endl;
                 std::cout << "Route upload store: " << route->uploadStore << std::endl;
-
+               
                 
                 try {
 
-                    // 405 Method Not Allowed
                     bool    found = false; 
                     for( std::vector<std::string>::const_iterator it = route->methods.begin(); it != route->methods.end(); ++it  )
                     {
@@ -157,7 +227,6 @@ void Connection::processRequest() {
                             break;
                         }
                     }
-                    
                     std::cout << "\n" <<  route->clientMaxBodySize << "==== check MAX NOT TRUE \n" << httpRequest.getContentLength();
                     if(!found)
                     {
@@ -169,21 +238,16 @@ void Connection::processRequest() {
                                 << " exceeds max body size " << route->clientMaxBodySize << std::endl;
                         response.setStatus(413);
                         response.setBody(HttpResponse::getDefaultErrorPage(413));
-                    } else if (httpRequest.getMethod() == "GET") {
+                    }  else if (httpRequest.getMethod() == "GET") {
                         if (httpRequest.getPath() == route->path)
                         {
+                            std::cout << "++++++++";
                             FileHandler::handleGet(route->root + "/" + route->index, response, route->autoIndex, route->path);
+                            
                         }
                         else if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
                         {
-                            std::string pathWithCgi = httpRequest.getPath();
-                            while (pathWithCgi.find("/cgi-bin") != std::string::npos)
-                            {
-                                pathWithCgi = pathWithCgi.substr(route->path.length());
-                            } 
-                            std::string cgiPath = route->root + pathWithCgi;
-                            std::cout << " Run cgi with path " << cgiPath << std::endl;
-                            FileHandler::handleCgi(cgiPath, raw, response);
+                            FileHandler::handleCgi(*route, response, httpRequest, requestBodyBin);
                         }
                         else
                         {
@@ -205,7 +269,8 @@ void Connection::processRequest() {
                             std::cout << "Using upload store path: " << uploadPath << std::endl;
                         }
                         std::cout << "Request body size: " << httpRequest.getBody().length() << std::endl;
-                        FileHandler::handlePost(uploadPath, raw, response);
+   
+                        FileHandler::handlePost(uploadPath, filename, response, requestBodyBin);
                     } else if (httpRequest.getMethod() == "DELETE") {
                         std::string deletePath;
                         if (route->uploadStore.empty()) {
