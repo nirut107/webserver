@@ -65,6 +65,11 @@ bool HttpRequest::parseHeaders(const std::string& headers) {
         contentLength = std::atoi(it->second.c_str());
     }
 
+    std::map<std::string, std::string>::iterator itc = this->headers.find("Content-Type");
+    if (itc != this->headers.end()) {
+        contenttype = itc->second;
+    }
+
     return true;
 }
 
