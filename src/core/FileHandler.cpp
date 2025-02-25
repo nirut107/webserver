@@ -465,3 +465,37 @@ bool FileHandler::createDirectories(const std::string& path) {
     
     return true;
 }
+
+std::string FileHandler::generateSessionID() {
+    static const char alphanum[] =
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    std::string sessionID;
+    srand(time(NULL)); // Seed for random generation
+
+    for (int i = 0; i < 16; ++i) {
+        sessionID += alphanum[rand() % (sizeof(alphanum) - 1)];
+    }
+    return sessionID;
+}
+
+void FileHandler::handleCookies(std::map<std::string, std::string> const &headers, HttpResponse &response) {
+    std::string sessionID = "";
+    std::map<std::string, std::string>::const_iterator it = headers.find("Cookie");
+    if (it != headers.end()) {
+        std::string cookieHeader = it->second;
+        size_t pos = cookieHeader.find("session_id=");
+        if (pos != std::string::npos) {
+            size_t end = cookieHeader.find(";", pos);
+            sessionID = cookieHeader.substr(pos + 11, end - pos - 11);
+        }
+    }
+
+    if (sessionID.empty()) {
+        sessionID = generateSessionID();
+        std::cout << "New session created: " << sessionID << std::endl;
+        //responseHeaders += "Set-Cookie: session_id=" + sessionID + "; Path=/; HttpOnly;\r\n";
+        response.setHeader("Set-Cookie", "session_id=" + sessionID + "; Path=/; HttpOnly");
+    } else {
+        std::cout << "Existing session found: " << sessionID << std::endl;
+    }
+}

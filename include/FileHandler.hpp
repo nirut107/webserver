@@ -28,6 +28,8 @@ public:
     static void handleDelete(const std::string& path, HttpResponse& response);
     static bool isDirectory(const std::string& path);
     static bool createDirectories(const std::string& path);
+    static std::string generateSessionID();
+    static void handleCookies(std::map<std::string, std::string> const &headers, HttpResponse &response);
 
 private:
     static std::string generateDirectoryListing(const std::string& path, std::string rootPath);

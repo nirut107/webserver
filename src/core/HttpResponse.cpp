@@ -143,3 +143,8 @@ void HttpResponse::clear() {
     headers.clear();
     body.clear();
 } 
+
+std::map<std::string, std::string> HttpResponse::getHeaders() const
+{
+    return headers;
+}

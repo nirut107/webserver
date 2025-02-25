@@ -245,7 +245,8 @@ void Connection::processRequest() {
 
                     
                     } else if (httpRequest.getPath().find("cookies") != std::string::npos) {
-                        // FileHandler::handleCookies();
+                        std::cout << "coooooooooooooooooookiessssssssssssss" << std::endl;
+                        FileHandler::handleCookies(response.getHeaders(), response);
 
                     } else if (httpRequest.getMethod() == "GET") {
                         if (httpRequest.getPath().find("cgi-bin") != std::string::npos)

@@ -31,6 +31,7 @@ public:
 
     static std::string getDefaultErrorPage(int code);
     static std::string getStatusText(int code);
+    std::map<std::string, std::string> getHeaders() const;
 
 private:
     int statusCode;
