@@ -76,109 +76,79 @@ void FileHandler::handleGet(const std::string& path, HttpResponse& response, boo
     response.setStatus(200);
 }
 
-void FileHandler::handlePost(const std::string& path, const std::string& content, HttpResponse& response) {
+void FileHandler::handlePost(const std::string& path, const std::string& filename, HttpResponse& response, std::vector<char> requestBodyBin) {
     
+    std::string fullPath = path + "/" + filename;
 
-    int pipefds[2];
-    
-    if (pipe(pipefds) == -1) {
-        response.setStatus(500);
-        response.setHeader("Content-Type", "text/html");
-        response.setBody(HttpResponse::getDefaultErrorPage(500));
+    if (requestBodyBin.empty()) {
+        response.setStatus(400);
+        response.setHeader("Content-Type", "text/plain");
+        response.setBody("No file uploaded");
         return;
     }
-    pid_t pid = fork();
-    if (pid == -1) {
+
+    std::ofstream file(fullPath.c_str(), std::ios::binary);
+    if (!file) {
         response.setStatus(500);
-        response.setHeader("Content-Type", "text/html");
-        response.setBody(HttpResponse::getDefaultErrorPage(500));
-    } else if (pid == 0) 
-    {
-        close(pipefds[1]);
-        if (dup2(pipefds[0], STDIN_FILENO) == -1) {
-            std::cerr << "dup2 failed\n";
-            exit(1);
-        }
-        close(pipefds[0]);
-        const char* args[] = {
-            (char*)"python3", 
-            (char*)"upload.py",
-            path.c_str(),
-            NULL
-        };
-
-        if (execve("/usr/bin/python3", (char**)args, NULL) == -1) {
-            std::cerr << "Execve failed: " << strerror(errno) << "\n";
-            exit(1);
-        }
-    } 
-    else {
-        int status;
-
-        close(pipefds[0]);
-        write(pipefds[1], content.c_str(), content.size());
-        close(pipefds[1]);
-        waitpid(pid, &status, 0);
-
-        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-                response.setStatus(200);
-                response.setHeader("Content-Type", "text/plain");
-                response.setBody("File uploaded successfully\n");
-                return ;
-        }
-        if (WIFEXITED(status)) {
-            int exit_code = WEXITSTATUS(status);
-
-            switch (exit_code) {
-                case 0:
-                    response.setStatus(200);
-                    response.setHeader("Content-Type", "text/plain");
-                    response.setBody("File uploaded successfully\n");
-                    break;
-                case 1:
-                    response.setStatus(500);
-                    response.setHeader("Content-Type", "text/html");
-                    response.setBody(HttpResponse::getDefaultErrorPage(500));
-                    break;
-                case 2:
-                    response.setStatus(413);
-                    response.setHeader("Content-Type", "text/html");
-                    response.setBody(HttpResponse::getDefaultErrorPage(413));
-                    break;
-                case 3:
-                    response.setStatus(415);
-                    response.setHeader("Content-Type", "text/html");
-                    response.setBody(HttpResponse::getDefaultErrorPage(415));
-                    break;
-                case 4:
-                    response.setStatus(403);
-                    response.setHeader("Content-Type", "text/html");
-                    response.setBody(HttpResponse::getDefaultErrorPage(403));
-                    break;
-                case 5:
-                    response.setStatus(200);
-                    response.setHeader("Content-Type", "text/plain");
-                    response.setBody("No file uploaded. Please try again\n");
-                    break;
-                default:
-                    response.setStatus(500);
-                    response.setHeader("Content-Type", "text/html");
-                    response.setBody(HttpResponse::getDefaultErrorPage(500));
-                    break;
-            }
-        }
+        response.setHeader("Content-Type", "text/plain");
+        response.setBody("Failed to open file for writing");
+        return;
     }
+
+    file.write(&requestBodyBin[0], requestBodyBin.size());
+    if (!file) {
+        response.setStatus(500);
+        response.setHeader("Content-Type", "text/plain");
+        response.setBody("Failed to write file");
+        return;
+    }
+    
+    file.close();
+    
+    response.setStatus(201);
+    response.setHeader("Content-Type", "application/json");
+    response.setHeader("Location", fullPath);
+    response.setBody("Upload " + filename + " successful");
+
 }
 
-void FileHandler::handleCgi(const std::string& path, const std::string& content, HttpResponse& response)
+void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::vector<char> requestBodyBin)
 {
-    int pipefds[2];
-    if (pipe(pipefds) == -1) {
+    std::string pathWithCgi = httpRequest.getPath();
+    while (pathWithCgi.find("/cgi-bin") != std::string::npos)
+    {
+        pathWithCgi = pathWithCgi.substr(route.path.length());
+    }
+    std::string cgiPath = route.root + pathWithCgi;
+    std::cout << " Run cgi with path " << cgiPath << std::endl;
+    if (route.uploadStore.empty())
+    {
+        size_t lastSlash = cgiPath.find_last_of('/');
+        route.uploadStore = cgiPath.substr(0, lastSlash + 1);
+    }
+
+    std::string cmdPath;
+    std::string fullCmdPath;
+    if (cgiPath.find(".py") != std::string::npos)
+    {
+        fullCmdPath = "/usr/bin/python3";
+        cmdPath = "python3";
+    }
+    else{
+        cmdPath ="php-cgi";
+        fullCmdPath = "/usr/bin/php-cgi";
+    }
+
+    int pipefds_out[2];
+    int pipefds_in[2];
+
+    if (pipe(pipefds_out) == -1 || pipe(pipefds_in) == -1) {
         response.setStatus(500);
         response.setHeader("Content-Type", "text/html");
         response.setBody(HttpResponse::getDefaultErrorPage(500));
         return;
     }
+
     pid_t pid = fork();
     if (pid == -1) {
         response.setStatus(500);
@@ -187,52 +157,104 @@ void FileHandler::handleCgi(const std::string& path, const std::string& content,
         return;
     } 
     else if (pid == 0) {
-        close(pipefds[0]);
-        if (dup2(pipefds[1], STDOUT_FILENO) == -1) {
+        close(pipefds_out[0]);
+        close(pipefds_in[1]);
+
+        if (dup2(pipefds_out[1], STDOUT_FILENO) == -1 ||
+            dup2(pipefds_out[1], STDERR_FILENO) == -1 ||
+            dup2(pipefds_in[0], STDIN_FILENO) == -1) {
             std::cerr << "dup2 failed\n";
             exit(1);
         }
-        if (dup2(pipefds[1], STDERR_FILENO) == -1) {
-            std::cerr << "dup2 failed\n";
-            exit(1);
-        }
-        close(pipefds[1]);
+
+        close(pipefds_out[1]);
+        close(pipefds_in[0]);
 
         const char* args[] = {
-            (char*)"python3",
-            path.c_str(),
-            content.c_str(),
+            cmdPath.c_str(),
+            cgiPath.c_str(),
             NULL
         };
 
-        if (execve("/usr/bin/python3", (char**)args, NULL) == -1) {
+        std::stringstream length;
+        length << httpRequest.getContentLength();
+
+        std::string envMethod = "REQUEST_METHOD=" + httpRequest.getMethod();
+        std::string envQuery = "QUERY_STRING=" + httpRequest.getQuery();
+        std::string envContentType = "CONTENT_TYPE=" + httpRequest.getContentType();
+        std::string envContentLength = "CONTENT_LENGTH=" + length.str();
+        std::string envUploadDir = "UPLOAD_DIR=" + route.uploadStore;
+        std::string envFileSize = "HTTP_FILESIZE=" + length.str();
+        std::string envStatus = "REDIRECT_STATUS=200";
+
+
+        char* envp[] = {
+            (char*)(envMethod.c_str()),
+            (char*)(envQuery.c_str()),
+            (char*)(envContentLength.c_str()),
+            (char*)(envUploadDir.c_str()),
+            (char*)(envFileSize.c_str()),
+            NULL
+        };
+
+    
+        if (execve(fullCmdPath.c_str(), (char**)args, envp) == -1) {
             std::cerr << "Execve failed: " << strerror(errno) << "\n";
             exit(1);
         }
         exit(0);
     } 
     else {
-        close(pipefds[1]);
+        close(pipefds_out[1]);
+        close(pipefds_in[0]);
+
+        if (!requestBodyBin.empty()) {
+            ssize_t written = write(pipefds_in[1], requestBodyBin.data(), requestBodyBin.size());
+            if (written == -1) {
+                std::cerr << "Failed to write request body to CGI process\n";
+            }
+        }
+        close(pipefds_in[1]);
+
         int status;
-        waitpid(pid, &status, 0);
+        int timeout = 5;
+        time_t startTime = time(NULL);
+        bool finished = false;
+
+        while (true) {
+            pid_t result = waitpid(pid, &status, WNOHANG);
+            if (result == pid) {
+                finished = true;
+                break;
+            } else if (result == 0) { 
+                if (time(NULL) - startTime > timeout) {
+                    kill(pid, SIGKILL);
+                    waitpid(pid, &status, 0);
+                    break;
+                }
+                usleep(100000);
+            } else {
+                break;
+            }
+        }
 
         std::string output;
         char buffer[1024];
         ssize_t bytesRead;
 
-        while ((bytesRead = read(pipefds[0], buffer, sizeof(buffer) - 1)) > 0) {
+        while ((bytesRead = read(pipefds_out[0], buffer, sizeof(buffer) - 1)) > 0) {
             buffer[bytesRead] = '\0';
+            std::cout << buffer;
             output += buffer;
         }
 
-        close(pipefds[0]);
+        close(pipefds_out[0]);
 
-        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+        if (finished && WIFEXITED(status) && WEXITSTATUS(status) == 0) {
             response.setStatus(200);
             response.setHeader("Content-Type", "text/html");
             response.setBody(output);
         } else {
-            std::cout << WIFEXITED(status) << " " << WEXITSTATUS(status) << output;
             response.setStatus(500);
             response.setHeader("Content-Type", "text/html");
             response.setBody(HttpResponse::getDefaultErrorPage(500));

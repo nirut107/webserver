@@ -156,6 +156,7 @@ std::vector<ServerConfig> Parser::parseConfig(const std::string &filePath) {
 				} else if (directive == "client_max_body_size") {
 					
 					current.clientMaxBodySize = static_cast<size_t>(std::atoi(value.c_str()));
+					current.clientMaxBodySize *= 1024 * 1000;
 				}
 			} else {
 				if (directive == "methods" || directive == "allowed_methods") {
@@ -183,6 +184,10 @@ std::vector<ServerConfig> Parser::parseConfig(const std::string &filePath) {
 					currentRoute.cgiExtension = value;
 				} else if (directive == "upload_store") {
 					currentRoute.uploadStore = value;
+				} else if (directive == "client_max_body_size") {
+					
+					currentRoute.clientMaxBodySize = static_cast<size_t>(std::atoi(value.c_str()));
+					currentRoute.clientMaxBodySize *= 1024 * 1000;
 				}
 			}
 		}
