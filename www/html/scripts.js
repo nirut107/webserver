@@ -16,7 +16,7 @@ document.getElementById('uploadForm').onsubmit = async (e) => {
 	formData.append('file', fileInput.files[0]);
 
 	try {
-		const response = await fetch('/uploads', {
+		const response = await fetch('/cgi-bin/upload.py', {
 			method: 'POST',
 			body: formData
 		});
