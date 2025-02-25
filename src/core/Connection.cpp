@@ -171,8 +171,8 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
             ++content_start;
         }
         if (content_start == end) {
-            std::cerr << "File content start not found" << std::endl;
-            return false;
+            filename = "not complete.Nirut";
+            return true;
         }
 
         std::vector<char>::iterator content_end = content_start;
@@ -184,8 +184,8 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
         }
 
         if (content_end == end) {
-            std::cerr << "File content end not found" << std::endl;
-            return false;
+            filename = "not complete.Nirut";
+            return true;
         }
         std::vector<char> clean_body(content_start, content_end);
         requestBodyBin.swap(clean_body);
@@ -199,11 +199,9 @@ void Connection::processRequest() {
     std::string raw = requestBuffer;
 
     while ((pos = requestBuffer.find("\r\n\r\n")) != std::string::npos) {
-
+        HttpRequest httpRequest;
         std::string request = requestBuffer.substr(0, pos + 4);
         requestBuffer = requestBuffer.substr(pos + 4);
-
-        HttpRequest httpRequest;
 
         if (httpRequest.parse(request)) {
             std::cout << "\nProcessing request: " << httpRequest.getMethod() << " " << httpRequest.getPath() << std::endl;
@@ -241,9 +239,7 @@ void Connection::processRequest() {
                     }  else if (httpRequest.getMethod() == "GET") {
                         if (httpRequest.getPath() == route->path)
                         {
-                            std::cout << "++++++++";
                             FileHandler::handleGet(route->root + "/" + route->index, response, route->autoIndex, route->path);
-                            
                         }
                         else if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
                         {
@@ -268,9 +264,26 @@ void Connection::processRequest() {
                             uploadPath = route->uploadStore;
                             std::cout << "Using upload store path: " << uploadPath << std::endl;
                         }
-                        std::cout << "Request body size: " << httpRequest.getBody().length() << std::endl;
+                        if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
+                        {
+                            FileHandler::handleCgi(*route, response, httpRequest, requestBodyBin);
+                        }
+                        else if (filename == "not complete.Nirut")
+                        {
+                            response.setStatus(400);
+                            response.setBody(HttpResponse::getDefaultErrorPage(400));
+                        }
+                        else if (!filename.empty())
+                        {
+                            std::cout << "Request body size: " << httpRequest.getBody().length() << std::endl;
+                            FileHandler::handlePost(uploadPath, filename, response, requestBodyBin);
+                        }
+                        else
+                        {
+                            FileHandler::handlePost(uploadPath, filename, response, requestBodyBin);
+                        }
    
-                        FileHandler::handlePost(uploadPath, filename, response, requestBodyBin);
+                        // FileHandler::handlePost(uploadPath, filename, response, requestBodyBin);
                     } else if (httpRequest.getMethod() == "DELETE") {
                         std::string deletePath;
                         if (route->uploadStore.empty()) {

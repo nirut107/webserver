@@ -127,6 +127,18 @@ void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const Htt
         route.uploadStore = cgiPath.substr(0, lastSlash + 1);
     }
 
+    std::string cmdPath;
+    std::string fullCmdPath;
+    if (cgiPath.find(".py") != std::string::npos)
+    {
+        fullCmdPath = "/usr/bin/python3";
+        cmdPath = "python3";
+    }
+    else{
+        cmdPath ="php-cgi";
+        fullCmdPath = "/usr/bin/php-cgi";
+    }
+
     int pipefds_out[2];
     int pipefds_in[2];
 
@@ -159,7 +171,7 @@ void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const Htt
         close(pipefds_in[0]);
 
         const char* args[] = {
-            (char*)"python3",
+            cmdPath.c_str(),
             cgiPath.c_str(),
             NULL
         };
@@ -169,11 +181,11 @@ void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const Htt
 
         std::string envMethod = "REQUEST_METHOD=" + httpRequest.getMethod();
         std::string envQuery = "QUERY_STRING=" + httpRequest.getQuery();
+        std::string envContentType = "CONTENT_TYPE=" + httpRequest.getContentType();
         std::string envContentLength = "CONTENT_LENGTH=" + length.str();
         std::string envUploadDir = "UPLOAD_DIR=" + route.uploadStore;
-        std::string envFileName = "HTTP_FILENAME=";
         std::string envFileSize = "HTTP_FILESIZE=" + length.str();
-        std::string envBoundary = "HTTP_BOUNDARY=aaaa";
+        std::string envStatus = "REDIRECT_STATUS=200";
 
 
         char* envp[] = {
@@ -181,13 +193,12 @@ void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const Htt
             (char*)(envQuery.c_str()),
             (char*)(envContentLength.c_str()),
             (char*)(envUploadDir.c_str()),
-            (char*)(envFileName.c_str()), 
             (char*)(envFileSize.c_str()),
-            (char*)(envBoundary.c_str()),
             NULL
         };
 
-        if (execve("/usr/bin/python3", (char**)args, envp) == -1) {
+    
+        if (execve(fullCmdPath.c_str(), (char**)args, envp) == -1) {
             std::cerr << "Execve failed: " << strerror(errno) << "\n";
             exit(1);
         }
