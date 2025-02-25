@@ -165,7 +165,7 @@ void Server::handleRequest(int clientSocket, const RouteConfig* route) {
                 std::cout << "Using upload store path: " << uploadPath << std::endl;
             }
             std::cout << "Request body size: " << request.getBody().length() << std::endl;
-            FileHandler::handlePost(uploadPath, request.getBody(), response);
+            FileHandler::handlePost(uploadPath, request.getBody(), response, std::vector<char>('0'));
         } else if (request.getMethod() == "DELETE") {
             FileHandler::handleDelete(route->root + request.getPath(), response);
         }
@@ -186,7 +186,7 @@ void Server::run() {
     std::cout << "Starting server with " << serverSockets.size() << " listening sockets" << std::endl;
     
     std::vector<pollfd> fds;
-    fds.reserve(1024); // Pre-allocate space for efficiency
+    fds.reserve(1024);
     
     while (running) {
         fds.clear();

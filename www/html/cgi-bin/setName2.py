@@ -1,14 +1,24 @@
 #!/usr/bin/env python3
 
-import os
 import sys
-import cgi
+import re
 
-def process_say_hi():
+def process_uploaded_bin():
 
-    form = cgi.FieldStorage()
+    post_data = sys.argv[1]
+    request_line = post_data.split("\n")[0]
 
-    username = form.getvalue("x", "anonymous")
+    pattern = r'[?&]x=([^&\s]+)'
+    match = re.search(pattern, request_line)
+
+    x_value = ""
+    if match:
+        x_value = match.group(1)
+        if not x_value:
+            x_value = "Unknownn"
+    else:
+        x_value = "Unknown"
+
 
     print(f"""
     <!DOCTYPE html>
@@ -153,7 +163,7 @@ def process_say_hi():
     </head>
     <body>
         <div class="container">
-            <h1>HELLO! {username}</h1>
+            <h1>HELLO {x_value if x_value else "No name provided"}</h1>
             <div class="section">
                 <h2>🛸 CGI Test</h2>
                 <form id="uploadForm" method="get" action="/cgi-bin/setName.py">
@@ -169,6 +179,5 @@ def process_say_hi():
     """)
     sys.exit(0)
 
-
 if __name__ == "__main__":
-    process_say_hi()
+    process_uploaded_bin()

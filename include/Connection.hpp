@@ -36,11 +36,13 @@
 class Connection {
 	private:
 		int socket;
-		const ServerConfig* config;
-		std::string requestBuffer;
-		std::string responseBuffer;
-		time_t lastActivity;
-		bool keepAlive;
+		const ServerConfig* 	config;
+		std::string 			requestBuffer;
+		std::vector<char> 		requestBodyBin;
+		std::string 			responseBuffer;
+		std::string				filename;
+		time_t 					lastActivity;
+		bool 					keepAlive;
 		
 	public:
 		Connection();
