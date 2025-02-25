@@ -269,6 +269,172 @@ void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const Htt
     }
 }
 
+void FileHandler::handleCookie(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& requestBody)
+{
+    
+    std::string     session;
+    std::string     key = "session-id=";
+    size_t pos = httpRequest.getCookie().find(key);
+    std::cout << httpRequest.getCookie() << "-----------------";
+    std::string sessionID;
+
+    if (pos != std::string::npos)
+    {
+        pos += key.length();
+        size_t end = httpRequest.getCookie().find(";", pos);
+        sessionID = httpRequest.getCookie().substr(pos, end - pos);
+        session = "www/html/cookie/session/" + sessionID;
+    }
+    else if (httpRequest.getContentLength() > 0)
+    {
+        const std::string chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()-_=+";
+        
+
+        std::srand(std::time(0));
+
+        for (size_t i = 0; i < 16; ++i) {
+            sessionID += chars[std::rand() % chars.size()];
+        }
+        session = "www/html/cookie/session/" + sessionID;
+        std::cout << session;
+        std::ofstream outfile(session.c_str());
+        if (outfile) {
+            outfile << "name=" + requestBody;
+            outfile.close();
+        }
+        
+    }
+    std::cout << httpRequest.getCookie() << "-----------------" << sessionID;
+    int pipefds_out[2];
+    int pipefds_in[2];
+
+    if (pipe(pipefds_out) == -1 || pipe(pipefds_in) == -1) {
+        response.setStatus(500);
+        response.setHeader("Content-Type", "text/html");
+        response.setBody(HttpResponse::getDefaultErrorPage(500));
+        return;
+    }
+
+    pid_t pid = fork();
+    if (pid == -1) {
+        response.setStatus(500);
+        response.setHeader("Content-Type", "text/html");
+        response.setBody(HttpResponse::getDefaultErrorPage(500));
+        return;
+    } 
+    else if (pid == 0) {
+        close(pipefds_out[0]);
+        close(pipefds_in[1]);
+
+        if (dup2(pipefds_out[1], STDOUT_FILENO) == -1 ||
+            dup2(pipefds_out[1], STDERR_FILENO) == -1 ||
+            dup2(pipefds_in[0], STDIN_FILENO) == -1) {
+            std::cerr << "dup2 failed\n";
+            exit(1);
+        }
+
+        close(pipefds_out[1]);
+        close(pipefds_in[0]);
+
+        std::string fullPath = route.root + httpRequest.getPath();
+        const char* args[] = {
+            (char*)"python3",
+            (char*)"www/html/cookie/session.py",
+            (char*)session.c_str(),
+            NULL
+        };
+
+        std::stringstream length;
+        length << httpRequest.getContentLength();
+
+        std::string envMethod = "REQUEST_METHOD=" + httpRequest.getMethod();
+        std::string envQuery = "QUERY_STRING=" + httpRequest.getQuery();
+        std::string envContentType = "CONTENT_TYPE=" + httpRequest.getContentType();
+        std::string envContentLength = "CONTENT_LENGTH=" + length.str();
+        std::string envUploadDir = "UPLOAD_DIR=" + route.uploadStore;
+        std::string envFileSize = "HTTP_FILESIZE=" + length.str();
+        std::string envStatus = "REDIRECT_STATUS=200";
+
+
+        char* envp[] = {
+            (char*)(envMethod.c_str()),
+            (char*)(envQuery.c_str()),
+            (char*)(envContentLength.c_str()),
+            (char*)(envUploadDir.c_str()),
+            (char*)(envFileSize.c_str()),
+            NULL
+        };
+
+    
+        if (execve((char*)"/usr/bin/python3", (char**)args, envp) == -1) {
+            std::cerr << "Execve failed: " << strerror(errno) << "\n";
+            exit(1);
+        }
+        exit(0);
+    } 
+    else {
+        close(pipefds_out[1]);
+        close(pipefds_in[0]);
+
+        
+        ssize_t written = write(pipefds_in[1], session.c_str(), session.size());
+            if (written == -1) {
+                std::cerr << "Failed to write request body to CGI process\n";
+            }
+        }
+        close(pipefds_in[1]);
+
+        int status;
+        int timeout = 5;
+        time_t startTime = time(NULL);
+        bool finished = false;
+
+        while (true) {
+            pid_t result = waitpid(pid, &status, WNOHANG);
+            if (result == pid) {
+                finished = true;
+                break;
+            } else if (result == 0) { 
+                if (time(NULL) - startTime > timeout) {
+                    kill(pid, SIGKILL);
+                    waitpid(pid, &status, 0);
+                    break;
+                }
+                usleep(100000);
+            } else {
+                break;
+            }
+        }
+
+        std::string output;
+        char buffer[1024];
+        ssize_t bytesRead;
+
+        while ((bytesRead = read(pipefds_out[0], buffer, sizeof(buffer) - 1)) > 0) {
+            buffer[bytesRead] = '\0';
+            output += buffer;
+        }
+
+        close(pipefds_out[0]);
+        
+
+        if (finished && WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+            response.setStatus(200);
+            response.setHeader("Content-Type", "text/html");
+            if (!sessionID.empty())
+            {
+                response.setHeader("Set-Cookie", "session-id=" + sessionID);
+                response.setHeader("Location", "/");
+            }
+            response.setBody(output);
+        } else {
+            response.setStatus(500);
+            response.setHeader("Content-Type", "text/html");
+            response.setBody(HttpResponse::getDefaultErrorPage(500));
+        }
+    }
+
+
 void FileHandler::handleDelete(const std::string& path, HttpResponse& response) {
     if (access(path.c_str(), F_OK) != 0) {
         response.setStatus(404);

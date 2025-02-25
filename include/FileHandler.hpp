@@ -25,6 +25,7 @@ public:
     static void handleGet(const std::string& path, HttpResponse& response, bool autoIndex, std::string rootPath);
     static void handlePost(const std::string& path, const std::string& filename, HttpResponse& response, std::vector<char> requestBodyBin);
     static void handleCgi(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::vector<char> 	requestBodyBin);
+    static void handleCookie(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& requestBody);
     static void handleDelete(const std::string& path, HttpResponse& response);
     static bool isDirectory(const std::string& path);
     static bool createDirectories(const std::string& path);
