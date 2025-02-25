@@ -18,14 +18,14 @@
 #include <map>
 
 struct RouteConfig {
-    std::string                         path;
-    std::string                         root;
-    std::string                         index;
-    std::vector<std::string>            methods;
-    std::string                         cgiExtension;
-    std::string                         uploadStore;
-    bool                                autoIndex;
-    size_t                              clientMaxBodySize;
+    std::string path;
+    std::string root;
+    std::string index;
+    std::vector<std::string> methods;
+    std::map<std::string, std::string> cgiExtension;
+    std::string uploadStore;
+    bool autoIndex;
+    size_t clientMaxBodySize;
 
     RouteConfig() : autoIndex(false), clientMaxBodySize(1024 * 1024 * 8) {}
 };
