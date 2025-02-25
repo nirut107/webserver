@@ -73,6 +73,7 @@ void FileHandler::handleGet(const std::string& path, HttpResponse& response, boo
 
     response.setBody(content);
     response.setHeader("Content-Type", getMimeType(path));
+    response.setHeader("Set-Cookie", "yummy_cookie=chocolate");
     response.setStatus(200);
 }
 
@@ -133,6 +134,7 @@ void FileHandler::handlePost(const std::string& path, const std::string& content
                 case 0:
                     response.setStatus(200);
                     response.setHeader("Content-Type", "text/plain");
+                    response.setHeader("Set-Cookie", "yummy_cookie=chocolate");
                     response.setBody("File uploaded successfully\n");
                     break;
                 case 1:

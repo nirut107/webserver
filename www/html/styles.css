@@ -107,7 +107,7 @@ h2 {
 	background: linear-gradient(45deg, #c0392b, #e74c3c);
 }
 
-input[type="text"], input[type="file"] {
+input[type="text"], input[type="file"], input[type="password"]{
 	background: rgba(255, 255, 255, 0.1);
 	border: 1px solid rgba(255, 255, 255, 0.2);
 	padding: 10px 15px;
@@ -119,6 +119,10 @@ input[type="text"], input[type="file"] {
 
 input[type="file"] {
 	padding: 10px;
+}
+
+#username, #password {
+	width: 50%;
 }
 
 #response, #getResponse, #uploadResponse, #deleteResponse {
