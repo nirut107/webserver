@@ -114,7 +114,15 @@ void FileHandler::handlePost(const std::string& path, const std::string& filenam
 
 void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::vector<char> requestBodyBin)
 {
-    std::string pathWithCgi = httpRequest.getPath();
+    std::string pathWithCgi;
+    if (httpRequest.getPath() == route.path)
+    {
+        pathWithCgi = route.root + "/" + route.index;
+    }
+    else
+    {
+       pathWithCgi = httpRequest.getPath();
+    }
     while (pathWithCgi.find("/cgi-bin") != std::string::npos)
     {
         pathWithCgi = pathWithCgi.substr(route.path.length());
@@ -126,7 +134,6 @@ void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const Htt
         size_t lastSlash = cgiPath.find_last_of('/');
         route.uploadStore = cgiPath.substr(0, lastSlash + 1);
     }
-
     std::string cmdPath;
     std::string fullCmdPath;
     if (cgiPath.find(".py") != std::string::npos)

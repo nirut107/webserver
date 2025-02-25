@@ -237,13 +237,13 @@ void Connection::processRequest() {
                         response.setStatus(413);
                         response.setBody(HttpResponse::getDefaultErrorPage(413));
                     }  else if (httpRequest.getMethod() == "GET") {
-                        if (httpRequest.getPath() == route->path)
-                        {
-                            FileHandler::handleGet(route->root + "/" + route->index, response, route->autoIndex, route->path);
-                        }
-                        else if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
+                        if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
                         {
                             FileHandler::handleCgi(*route, response, httpRequest, requestBodyBin);
+                        }
+                        else if (httpRequest.getPath() == route->path)
+                        {
+                            FileHandler::handleGet(route->root + "/" + route->index, response, route->autoIndex, route->path);
                         }
                         else
                         {
@@ -264,6 +264,7 @@ void Connection::processRequest() {
                             uploadPath = route->uploadStore;
                             std::cout << "Using upload store path: " << uploadPath << std::endl;
                         }
+
                         if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
                         {
                             FileHandler::handleCgi(*route, response, httpRequest, requestBodyBin);
