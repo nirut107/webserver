@@ -65,6 +65,72 @@ void Connection::setBodyBin(std::vector<char> body, std::string& header)
     requestBuffer = header;
 }
 
+void Connection::RequestCutOffBody(const std::string& headers, std::vector<char>& requestBodyBin)
+{
+    std::istringstream stream(headers);
+    std::string line;
+    std::string boundary;
+
+    while (std::getline(stream, line) && line != "\r") {
+        if (line.find("Content-Type:") == 0) {
+            size_t boundary_pos = line.find("boundary=");
+            if (boundary_pos != std::string::npos) {
+                boundary = line.substr(boundary_pos + 9);
+            }
+        }
+    }
+
+    if (!boundary.empty()) {
+        if (boundary.substr(0, 2) == "--") {
+            boundary = boundary.substr(2);
+        }
+        if (boundary.substr(boundary.size() - 2) == "--") {
+            boundary = boundary.substr(0, boundary.size() - 2);
+        }
+    }
+
+    if (!boundary.empty() && !requestBodyBin.empty()) {
+        std::vector<char>::iterator it = requestBodyBin.begin();
+        std::vector<char>::iterator end = requestBodyBin.end();
+
+        while (it != end - boundary.size()) {
+            if (std::equal(boundary.begin(), boundary.end(), it)) {
+                break;
+            }
+            ++it;
+        }
+
+        it += boundary.size();
+        while (it != end && (*it == '\r' || *it == '\n')) {
+            ++it;
+        }
+
+        std::vector<char>::iterator content_start = it;
+
+        while (content_start != end - 4) {
+            if (*content_start == '\r' && *(content_start + 1) == '\n' &&
+                *(content_start + 2) == '\r' && *(content_start + 3) == '\n') {
+                content_start += 4;
+                break;
+            }
+            ++content_start;
+        }
+
+        std::vector<char>::iterator content_end = content_start;
+
+        while (content_end != end - boundary.size() - 2) {
+            if (std::equal(boundary.begin(), boundary.end(), content_end)) {
+                break;
+            }
+            ++content_end;
+        }
+
+        std::vector<char> clean_body(content_start, content_end - 5);;
+        requestOnlyBodyBin = clean_body;
+    }
+}
+
+
 bool Connection::appendRequestData(const std::string& data, int socket) {
     requestBuffer += data;
     std::istringstream  stream(requestBuffer);
@@ -194,7 +260,7 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
             return true;
         }
         std::vector<char> clean_body(content_start, content_end);
-        requestBodyBin.swap(clean_body);
+        requestOnlyBodyBin.swap(clean_body);
     }
     return true;
 }
@@ -213,6 +279,7 @@ void Connection::processRequest() {
             std::cout << "\nProcessing request: " << httpRequest.getMethod() << " " << httpRequest.getPath() << std::endl;
 
             HttpResponse response;
+            
             
             const RouteConfig* route = Router::findRoute(*config, httpRequest.getPath());
             if (route) {
@@ -241,10 +308,15 @@ void Connection::processRequest() {
                                 << " exceeds max body size " << route->clientMaxBodySize << std::endl;
                         response.setStatus(413);
                         response.setBody(HttpResponse::getDefaultErrorPage(413));
+                    }
+                    else if (httpRequest.getPath().find("/cookie") != std::string::npos) {
+                        std::string strBody(requestOnlyBodyBin.size(), '\0');
+                        std::copy(requestOnlyBodyBin.begin(), requestOnlyBodyBin.end(), strBody.begin());
+                        FileHandler::handleCookie(*route, response, httpRequest, strBody);
                     } else if (httpRequest.getMethod() == "GET") {
                         if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
                         {
-                            FileHandler::handleCgi(*route, response, httpRequest, requestBodyBin);
+                            FileHandler::handleCgi(*route, response, httpRequest, requestOnlyBodyBin);
                         }
                         else if (httpRequest.getPath() == route->path)
                         {
@@ -272,7 +344,7 @@ void Connection::processRequest() {
 
                         if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
                         {
-                            FileHandler::handleCgi(*route, response, httpRequest, requestBodyBin);
+                            FileHandler::handleCgi(*route, response, httpRequest, requestOnlyBodyBin);
                         }
                         else if (filename == "not complete.Nirut")
                         {
@@ -282,14 +354,12 @@ void Connection::processRequest() {
                         else if (!filename.empty())
                         {
                             std::cout << "Request body size: " << httpRequest.getBody().length() << std::endl;
-                            FileHandler::handlePost(uploadPath, filename, response, requestBodyBin);
+                            FileHandler::handlePost(uploadPath, filename, response, requestOnlyBodyBin);
                         }
                         else
                         {
-                            FileHandler::handlePost(uploadPath, filename, response, requestBodyBin);
+                            FileHandler::handlePost(uploadPath, filename, response, requestOnlyBodyBin);
                         }
-   
-                        // FileHandler::handlePost(uploadPath, filename, response, requestBodyBin);
                     } else if (httpRequest.getMethod() == "DELETE") {
                         std::string deletePath;
                         if (route->uploadStore.empty()) {

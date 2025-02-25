@@ -39,6 +39,7 @@ class Connection {
 		const ServerConfig* 	config;
 		std::string 			requestBuffer;
 		std::vector<char> 		requestBodyBin;
+		std::vector<char> 		requestOnlyBodyBin;
 		std::string 			responseBuffer;
 		std::string				filename;
 		time_t 					lastActivity;
@@ -55,6 +56,7 @@ class Connection {
 		bool hasDataToWrite() const;
 		const std::string& getResponse() const;
 		void clearResponse(size_t bytes);
+		void RequestCutOffBody(const std::string& headers, std::vector<char>& requestBodyBin);
 		bool appendRequestData(const std::string& data, int socket);
 		void setBodyBin(std::vector<char> body, std::string& header);
 		void processRequest();

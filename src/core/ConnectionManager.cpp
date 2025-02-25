@@ -97,6 +97,7 @@ void ConnectionManager::handleRead(Connection& conn) {
             size_t bodyStart = headerEnd + 4;
             body.assign(buffer + bodyStart, buffer + raw.size());
             conn.setBodyBin(body, headers);
+            conn.RequestCutOffBody(headers, body);
             conn.processRequest();
             return ;
         }
