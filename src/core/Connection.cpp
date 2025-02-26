@@ -65,6 +65,30 @@ void Connection::setBodyBin(std::vector<char> body, std::string& header)
     requestBuffer = header;
 }
 
+int hexToInt(const std::string& hex) {
+    int value;
+    std::stringstream ss;
+    ss << std::hex << hex;
+    ss >> value;
+    return value;
+}
+
+std::string urlDecode(const std::string& encoded) {
+    std::ostringstream decoded;
+    for (size_t i = 0; i < encoded.length(); ++i) {
+        if (encoded[i] == '%' && i + 2 < encoded.length()) {
+            std::string hexValue = encoded.substr(i + 1, 2);
+            decoded << static_cast<char>(hexToInt(hexValue));
+            i += 2; // Skip next two characters
+        } else if (encoded[i] == '+') {
+            decoded << ' '; // Convert '+' to space
+        } else {
+            decoded << encoded[i];
+        }
+    }
+    return decoded.str();
+}
+
 void Connection::RequestCutOffBody(const std::string& headers, std::vector<char>& requestBodyBin)
 {
     std::istringstream stream(headers);
@@ -88,6 +112,11 @@ void Connection::RequestCutOffBody(const std::string& headers, std::vector<char>
             boundary = boundary.substr(0, boundary.size() - 2);
         }
     }
+    else
+    {
+        requestOnlyBodyBin = requestBodyBin;
+        return ;
+    }
 
     if (!boundary.empty() && !requestBodyBin.empty()) {
         std::vector<char>::iterator it = requestBodyBin.begin();
@@ -104,6 +133,35 @@ void Connection::RequestCutOffBody(const std::string& headers, std::vector<char>
         while (it != end && (*it == '\r' || *it == '\n')) {
             ++it;
         }
+        std::vector<char>::iterator header_start = it;
+        while (header_start != end - 20) {
+            if (std::equal(header_start, header_start + 19, "Content-Disposition:")) {
+                std::vector<char>::iterator header_end = header_start;
+                while (header_end != end && *header_end != '\n') {
+                    ++header_end;
+                }
+
+                std::string header(header_start, header_end);
+
+                size_t filename_pos = header.find("filename=\"");
+                if (filename_pos != std::string::npos) {
+                    filename_pos += 10;
+                    size_t filename_end = header.find("\"", filename_pos);
+                    if (filename_end != std::string::npos) {
+                        filename = header.substr(filename_pos, filename_end - filename_pos);
+                        filename = urlDecode(filename);
+                        std::cout << "Extracted filename: " << this->filename << std::endl;
+                    }
+                }
+                break;
+            }
+            ++header_start;
+        }
+
+        if (this->filename.empty()) {
+            this->filename = "default_upload.bin";
+        }
+
 
         std::vector<char>::iterator content_start = it;
 
@@ -222,6 +280,7 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
                     size_t filename_end = header.find("\"", filename_pos);
                     if (filename_end != std::string::npos) {
                         filename = header.substr(filename_pos, filename_end - filename_pos);
+                        filename = urlDecode(filename);
                         std::cout << "Extracted filename: " << filename << std::endl;
                     }
                 }
@@ -314,9 +373,11 @@ void Connection::processRequest() {
                         std::copy(requestOnlyBodyBin.begin(), requestOnlyBodyBin.end(), strBody.begin());
                         FileHandler::handleCookie(*route, response, httpRequest, strBody);
                     } else if (httpRequest.getMethod() == "GET") {
-                        if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
+                        if (httpRequest.getPath().find("/cgi-bin") != std::string::npos)
                         {
-                            FileHandler::handleCgi(*route, response, httpRequest, requestOnlyBodyBin);
+                            std::string strBody(requestOnlyBodyBin.size(), '\0');
+                            std::copy(requestOnlyBodyBin.begin(), requestOnlyBodyBin.end(), strBody.begin());
+                            FileHandler::handleCgi(*route, response, httpRequest, strBody);
                         }
                         else if (httpRequest.getPath() == route->path)
                         {
@@ -342,9 +403,11 @@ void Connection::processRequest() {
                             std::cout << "Using upload store path: " << uploadPath << std::endl;
                         }
 
-                        if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
+                        if (httpRequest.getPath().find("/cgi-bin") != std::string::npos)
                         {
-                            FileHandler::handleCgi(*route, response, httpRequest, requestOnlyBodyBin);
+                            std::string strBody(requestOnlyBodyBin.size(), '\0');
+                            std::copy(requestOnlyBodyBin.begin(), requestOnlyBodyBin.end(), strBody.begin());
+                            FileHandler::handleCgi(*route, response, httpRequest, strBody);
                         }
                         else if (filename == "not complete.Nirut")
                         {
@@ -376,6 +439,7 @@ void Connection::processRequest() {
                             std::cout << deletePath << "delete\n\n";
                         }
                         std::cout << "Using delete path: " << deletePath << std::endl;
+                        deletePath = urlDecode(deletePath);
                         FileHandler::handleDelete(deletePath, response);
                     } else {
                         response.setStatus(405);

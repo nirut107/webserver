@@ -112,7 +112,7 @@ void FileHandler::handlePost(const std::string& path, const std::string& filenam
 
 }
 
-void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::vector<char> requestBodyBin)
+void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& requestBodyBin)
 {
     std::string pathWithCgi;
     if (httpRequest.getPath() == route.path)
@@ -216,7 +216,7 @@ void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const Htt
         close(pipefds_in[0]);
 
         if (!requestBodyBin.empty()) {
-            ssize_t written = write(pipefds_in[1], requestBodyBin.data(), requestBodyBin.size());
+            ssize_t written = write(pipefds_in[1], requestBodyBin.c_str(), requestBodyBin.size());
             if (written == -1) {
                 std::cerr << "Failed to write request body to CGI process\n";
             }
@@ -251,7 +251,6 @@ void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const Htt
 
         while ((bytesRead = read(pipefds_out[0], buffer, sizeof(buffer) - 1)) > 0) {
             buffer[bytesRead] = '\0';
-            std::cout << buffer;
             output += buffer;
         }
 
@@ -424,7 +423,6 @@ void FileHandler::handleCookie(RouteConfig route, HttpResponse& response, const 
             if (!sessionID.empty())
             {
                 response.setHeader("Set-Cookie", "session-id=" + sessionID);
-                response.setHeader("Location", "/");
             }
             response.setBody(output);
         } else {

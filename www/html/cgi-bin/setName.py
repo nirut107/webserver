@@ -155,8 +155,15 @@ def process_say_hi():
         <div class="container">
             <h1>HELLO! {username}</h1>
             <div class="section">
-                <h2>🛸 CGI Test</h2>
+                <h2>🛸 CGI Test GET</h2>
                 <form id="uploadForm" method="get" action="/cgi-bin/setName.py">
+                    <input type="text" placeholder="input your name" name="x">
+                    <button type="submit" class="button">Say Hi</button>
+                </form>
+            </div>
+            <div class="section">
+                <h2>🛸 CGI Test POST</h2>
+                <form id="uploadForm" method="post" action="/cgi-bin/setName.py">
                     <input type="text" placeholder="input your name" name="x">
                     <button type="submit" class="button">Say Hi</button>
                 </form>
