@@ -415,14 +415,19 @@ void FileHandler::handleCookie(RouteConfig route, HttpResponse& response, const 
         }
 
         close(pipefds_out[0]);
-        
+
+        std::time_t now = std::time(NULL);
+        now += 60 * 60;
+        std::tm *gmt_time = std::gmtime(&now);
+        char time[100];
+        std::strftime(time, sizeof(time), "%a, %d %b %Y %H:%M:%S GMT", gmt_time);
 
         if (finished && WIFEXITED(status) && WEXITSTATUS(status) == 0) {
             response.setStatus(200);
             response.setHeader("Content-Type", "text/html");
             if (!sessionID.empty())
             {
-                response.setHeader("Set-Cookie", "session-id=" + sessionID);
+                response.setHeader("Set-Cookie", "session-id=" + sessionID + ";" + " Expires=" + std::string(time) + ";" + " Secure; HttpOnly;" );
             }
             response.setBody(output);
         } else {
