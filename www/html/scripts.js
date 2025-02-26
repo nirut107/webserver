@@ -9,6 +9,16 @@ async function testGet() {
 	}
 }
 
+async function uploads() {
+	try {
+		const response = await fetch('/uploads');
+		const text = await response.text();
+		document.getElementById('uploadStore').innerHTML = `Response: ${text}`;
+	} catch (error) {
+		document.getElementById('uploadStore').innerHTML = `Error: ${error.message}`;
+	}
+}
+
 document.getElementById('uploadForm').onsubmit = async (e) => {
 	e.preventDefault();
 	const formData = new FormData();

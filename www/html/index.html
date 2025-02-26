@@ -24,9 +24,13 @@
             <form id="uploadForm" enctype="multipart/form-data">
                 <input type="file" id="fileInput" name="file">
                 <button type="submit" class="button">Upload File</button>
-                <span class="button"><a href="/uploads" >go to uploaded store</a></span>
             </form>
             <div id="uploadResponse"></div>
+        </div>
+        <div class="section">
+            <h2>🚀 check store</h2>
+            <button class="button" onclick="uploads()">go to uploaded store</button>
+            <div id="uploadStore"></div>
         </div>
 
         <div class="section">
@@ -39,6 +43,11 @@
         <div class="section">
             <h2>🛸 CGI Test</h2>
             <a href="/cgi-bin">Go to test Page</a>
+            <div id="deleteResponse"></div>
+        </div>
+        <div class="section">
+            <h2>🌌 Session Test</h2>
+            <a href="/cookie">Go to test Page</a>
             <div id="deleteResponse"></div>
         </div>
     </div>
