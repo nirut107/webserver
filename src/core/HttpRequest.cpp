@@ -24,7 +24,8 @@ HttpRequest::HttpRequest() : contentLength(0) {}
 
 HttpRequest::~HttpRequest() {}
 
-bool HttpRequest::parse(const std::string& request) {
+bool HttpRequest::parse(const std::string& request, std::vector<char>& rawbody) {
+    rawBody = rawbody;
     return parseHeaders(request);
 }
 
@@ -32,7 +33,6 @@ bool HttpRequest::parseHeaders(const std::string& headers) {
     std::istringstream stream(headers);
     std::string line;
 
-    // Parse request line
     if (!std::getline(stream, line)) {
         std::cerr << "Failed to read request line" << std::endl;
         return false;
