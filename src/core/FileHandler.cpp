@@ -25,6 +25,7 @@
 #include <fcntl.h>
 
 void FileHandler::handleGet(const std::string& path, HttpResponse& response, bool autoIndex, std::string rootPath) {
+
     struct stat st;
     if (stat(path.c_str(), &st) != 0) {
         response.setStatus(404);
@@ -76,9 +77,36 @@ void FileHandler::handleGet(const std::string& path, HttpResponse& response, boo
     response.setStatus(200);
 }
 
+static bool fileExists(const std::string& filename) {
+    struct stat buffer;
+    return (stat(filename.c_str(), &buffer) == 0);
+}
+
+static std::string getUniqueFilename(const std::string& path, const std::string& filename) {
+    std::string baseName = filename;
+    std::string extension;
+    size_t dotPos = filename.find_last_of('.');
+
+    if (dotPos != std::string::npos) {
+        baseName = filename.substr(0, dotPos);
+        extension = filename.substr(dotPos);
+    }
+
+    std::string uniqueName = filename;
+    int count = 1;
+
+    while (fileExists(path + "/" + uniqueName)) {
+        std::ostringstream ss;
+        ss << baseName << "(" << count << ")" << extension;
+        uniqueName = ss.str();
+        ++count;
+    }
+    return uniqueName;
+}
+
 void FileHandler::handlePost(const std::string& path, const std::string& filename, HttpResponse& response, std::vector<char> requestBodyBin) {
     
-    std::string fullPath = path + "/" + filename;
+    std::string fullPath = path + "/" + getUniqueFilename(path, filename);;
 
     if (requestBodyBin.empty()) {
         response.setStatus(400);
@@ -111,6 +139,7 @@ void FileHandler::handlePost(const std::string& path, const std::string& filenam
     response.setBody("Upload " + filename + " successful");
 
 }
+
 
 void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& requestBodyBin)
 {
@@ -273,28 +302,27 @@ void FileHandler::handleCookie(RouteConfig route, HttpResponse& response, const 
     
     std::string     session;
     std::string     key = "session-id=";
-    size_t pos = httpRequest.getCookie().find(key);
-    std::cout << httpRequest.getCookie() << "-----------------";
-    std::string sessionID;
+    size_t          pos = httpRequest.getCookie().find(key);
+    std::string     sessionID;
 
     if (pos != std::string::npos)
     {
         pos += key.length();
         size_t end = httpRequest.getCookie().find(";", pos);
         sessionID = httpRequest.getCookie().substr(pos, end - pos);
-        session = "www/html/cookie/session/" + sessionID;
+        session = route.uploadStore + "/" + sessionID;
     }
     else if (httpRequest.getContentLength() > 0)
     {
-        const std::string chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()-_=+";
+        const std::string chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
         
 
         std::srand(std::time(0));
 
-        for (size_t i = 0; i < 16; ++i) {
+        for (size_t i = 0; i < 32; ++i) {
             sessionID += chars[std::rand() % chars.size()];
         }
-        session = "www/html/cookie/session/" + sessionID;
+        session = route.uploadStore + "/" + sessionID;
         std::cout << session;
         std::ofstream outfile(session.c_str());
         if (outfile) {
@@ -303,7 +331,7 @@ void FileHandler::handleCookie(RouteConfig route, HttpResponse& response, const 
         }
         
     }
-    std::cout << httpRequest.getCookie() << "-----------------" << sessionID;
+    std::cout << httpRequest.getCookie() << "-----------------" << session << "-------------";
     int pipefds_out[2];
     int pipefds_in[2];
 
@@ -335,10 +363,9 @@ void FileHandler::handleCookie(RouteConfig route, HttpResponse& response, const 
         close(pipefds_out[1]);
         close(pipefds_in[0]);
 
-        std::string fullPath = route.root + httpRequest.getPath();
         const char* args[] = {
             (char*)"python3",
-            (char*)"www/html/cookie/session.py",
+            (char*)"cookie/session.py",
             (char*)session.c_str(),
             NULL
         };
@@ -411,6 +438,7 @@ void FileHandler::handleCookie(RouteConfig route, HttpResponse& response, const 
 
         while ((bytesRead = read(pipefds_out[0], buffer, sizeof(buffer) - 1)) > 0) {
             buffer[bytesRead] = '\0';
+            std::cout << buffer;
             output += buffer;
         }
 

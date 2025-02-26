@@ -16,13 +16,14 @@
 #include <string>
 #include <map>
 #include <sstream>
+#include <vector>
 
 class HttpRequest {
 public:
     HttpRequest();
     ~HttpRequest();
 
-    bool parse(const std::string& request);
+    bool parse(const std::string& request, std::vector<char>& rawbody);
     bool parse(int clientSocket);
     bool isComplete() const;
     
@@ -33,6 +34,7 @@ public:
     const std::string& getBody() const { return body; }
     const std::string& getContentType() const { return contenttype; }
     const std::string& getCookie() const { return cookie; }
+    const std::vector<char>& getRawBody() const { return rawBody; }
     const std::map<std::string, std::string>& getHeaders() const { return headers; }
     std::string getHeader(const std::string& name) const;
     size_t getContentLength() const { return contentLength; }
@@ -48,6 +50,7 @@ private:
     std::string query;
     std::string version;
     std::string body;
+    std::vector<char> rawBody;
     std::string contenttype;
     std::string cookie;
     std::map<std::string, std::string> headers;
