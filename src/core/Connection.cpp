@@ -89,6 +89,20 @@ std::string urlDecode(const std::string& encoded) {
     return decoded.str();
 }
 
+std::string trim(const std::string& str) {
+    size_t start = 0;
+    while (start < str.length() && std::isspace(str[start])) {
+        ++start;
+    }
+
+    size_t end = str.length();
+    while (end > start && std::isspace(str[end - 1])) {
+        --end;
+    }
+
+    return str.substr(start, end - start);
+}
+
 void Connection::RequestCutOffBody(const std::string& headers, std::vector<char>& requestBodyBin)
 {
     std::istringstream stream(headers);
@@ -334,11 +348,11 @@ void Connection::processRequest() {
         std::string request = requestBuffer.substr(0, pos + 4);
         requestBuffer = requestBuffer.substr(pos + 4);
 
-        if (httpRequest.parse(request)) {
-            std::cout << "\nProcessing request: " << httpRequest.getMethod() << " " << httpRequest.getPath() << std::endl;
+        if (httpRequest.parse(request, requestBodyBin)) {
+
+            std::cout << "\nProcessing request: " << request << " " << httpRequest.getContentLength() << "========="<< std::endl;
 
             HttpResponse response;
-            
             
             const RouteConfig* route = Router::findRoute(*config, httpRequest.getPath());
             if (route) {
@@ -416,7 +430,6 @@ void Connection::processRequest() {
                         }
                         else if (!filename.empty())
                         {
-                            std::cout << "Request body size: " << httpRequest.getBody().length() << std::endl;
                             FileHandler::handlePost(uploadPath, filename, response, requestOnlyBodyBin);
                         }
                         else
@@ -435,11 +448,12 @@ void Connection::processRequest() {
                             if (!filename.empty() && filename[0] == '/') {
                                 filename = filename.substr(1);
                             }
+                            filename = urlDecode(filename);
+                            filename = trim(filename);
                             deletePath = route->uploadStore + "/" + filename;
                             std::cout << deletePath << "delete\n\n";
                         }
                         std::cout << "Using delete path: " << deletePath << std::endl;
-                        deletePath = urlDecode(deletePath);
                         FileHandler::handleDelete(deletePath, response);
                     } else {
                         response.setStatus(405);
