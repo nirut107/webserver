@@ -53,5 +53,12 @@
 		"streambuf": "cpp",
 		"cinttypes": "cpp",
 		"typeinfo": "cpp"
+	},
+	"workbench.colorCustomizations": {
+		"terminal.background": "#222222",
+		"terminal.foreground": "#CCFF33",
+		"activityBar.background": "#451A57",
+		"titleBar.activeBackground": "#602579",
+		"titleBar.activeForeground": "#FCF9FD"
 	}
 }

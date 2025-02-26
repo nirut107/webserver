@@ -15,6 +15,38 @@
 #include "Router.hpp"
 #include <iostream>
 
+static void debugRequest(HttpRequest req)
+{
+    std::cout << "debugRequest()" << std::endl;
+    std::cout << "\t\tMETHOD: " << req.getMethod() << std::endl; 
+    std::cout << "\t\tPATH: " << req.getPath() << std::endl; 
+    std::cout << "\t\tBODY: " << req.getBody() << std::endl; 
+    std::cout << "\t\tMETHOD: " << req.getMethod() << std::endl; 
+}
+static void debugRoute(const RouteConfig *route)
+{
+    std::cout << "debugRoute()" << std::endl;
+    if(!route)
+    {
+        std::cout << "\t\t(NULL)";
+        return ; 
+    }
+
+    std::cout << "\t\tPATH: " << route->path << std::endl; 
+    std::cout << "\t\tINDEX: " << route->index << std::endl; 
+//route->
+
+
+    //std::cout << "\t\tCGI: "; 
+
+
+    for( std::map<std::string,std::string>::const_iterator it = (route->cgiExtension).begin();it != (route->cgiExtension).end(); ++it)
+    {
+        std::cout << it->first << " ==> " << it->second <<  std::endl;
+    }
+    std::cout << std::endl;
+}
+
 Connection::Connection()
     : socket(-1), config(NULL), lastActivity(time(NULL)), keepAlive(false) {}
 
@@ -212,25 +244,41 @@ void Connection::processRequest() {
             
             const RouteConfig* route = Router::findRoute(*config, httpRequest.getPath());
             if (route) {
-                std::cout << "Found route with path: " << route->path << std::endl;
-                std::cout << "Route upload store: " << route->uploadStore << std::endl;
+                std::cout << "\t\tFound route with path: " << route->path << std::endl;
+                std::cout << "\t\tRoute upload store: " << route->uploadStore << std::endl;
+
+                debugRequest(httpRequest);
+                debugRoute(route);
+
+                std::string cmd = getCgiCommand(httpRequest , *route);
+                std::cout << "\t\t - CGI command = " << cmd << std::endl;
                
                 
                 try {
 
-                    bool    found = false; 
+
+                    if (!cmd.empty())
+                    {
+                        std::cout << "DEBUG << CGI HANDLER " << std::endl;
+                        FileHandler::handleCgi(*route, response, httpRequest, requestBodyBin);
+                        std::cout << " RETURN FOR NOW ";
+                        return ;
+                    }
+
+                    // SHOULD BE BELOW THE CHECKING BIT FOR EASY DEBUGGING, PUT ON TOP
+                    
+
+                    bool    method_found = false; 
                     for( std::vector<std::string>::const_iterator it = route->methods.begin(); it != route->methods.end(); ++it  )
                     {
                         if( httpRequest.getMethod() ==  *it)
                         { 
-                            found = true;
+                            method_found = true;
                             break;
                         }
                     }
-                    std::cout << "\n" <<  route->clientMaxBodySize << "==== check MAX NOT TRUE \n" << httpRequest.getContentLength();
-                    if(!found)
+                    if(!method_found)
                     {
-                        std::cout << "\t\tNOT FOUND" << std::endl;
                         response.setStatus(405);
                         response.setBody(HttpResponse::getDefaultErrorPage(405));
                     } else if (httpRequest.getContentLength() > route->clientMaxBodySize) {
@@ -241,13 +289,11 @@ void Connection::processRequest() {
                     }  else if (httpRequest.getMethod() == "GET") {
                         if (httpRequest.getPath() == route->path)
                         {
-                            std::cout << "++++++++";
-                            FileHandler::handleGet(route->root + "/" + route->index, response, route->autoIndex, route->path);
-                            
-                        }
-                        else if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
-                        {
                             FileHandler::handleCgi(*route, response, httpRequest, requestBodyBin);
+                        }
+                        else if (httpRequest.getPath() == route->path)
+                        {
+                            FileHandler::handleGet(route->root + "/" + route->index, response, route->autoIndex, route->path);
                         }
                         else
                         {
@@ -268,9 +314,27 @@ void Connection::processRequest() {
                             uploadPath = route->uploadStore;
                             std::cout << "Using upload store path: " << uploadPath << std::endl;
                         }
-                        std::cout << "Request body size: " << httpRequest.getBody().length() << std::endl;
+
+                        if (httpRequest.getPath().find("cgi-bin") != std::string::npos)
+                        {
+                            FileHandler::handleCgi(*route, response, httpRequest, requestBodyBin);
+                        }
+                        else if (filename == "not complete.Nirut")
+                        {
+                            response.setStatus(400);
+                            response.setBody(HttpResponse::getDefaultErrorPage(400));
+                        }
+                        else if (!filename.empty())
+                        {
+                            std::cout << "Request body size: " << httpRequest.getBody().length() << std::endl;
+                            FileHandler::handlePost(uploadPath, filename, response, requestBodyBin);
+                        }
+                        else
+                        {
+                            FileHandler::handlePost(uploadPath, filename, response, requestBodyBin);
+                        }
    
-                        FileHandler::handlePost(uploadPath, filename, response, requestBodyBin);
+                        // FileHandler::handlePost(uploadPath, filename, response, requestBodyBin);
                     } else if (httpRequest.getMethod() == "DELETE") {
                         std::string deletePath;
                         if (route->uploadStore.empty()) {
@@ -318,3 +382,26 @@ void Connection::processRequest() {
 void Connection::updateLastActivity() {
     lastActivity = time(NULL);
 } 
+
+
+std::string    Connection::getCgiCommand(HttpRequest req, RouteConfig route)
+{
+    std::string targetFile = req.getPath();
+    if( targetFile.find('.') == std::string::npos)
+    {
+        if( targetFile.at( targetFile.size() -1 ) == '/')
+            targetFile += route.index; 
+        else 
+            targetFile += '/' + route.index; 
+    }
+
+    size_t last_dot = targetFile.find_last_of('.');
+    if (last_dot == std::string::npos)
+        return "";
+    targetFile = targetFile.substr(last_dot, targetFile.size());
+    if( route.cgiExtension.size() > 0 && route.cgiExtension.count(targetFile) > 0)
+        return route.cgiExtension.at(targetFile);
+    return ("");
+
+    
+}

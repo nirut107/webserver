@@ -31,6 +31,7 @@ public:
     const std::string& getQuery() const { return query; }
     const std::string& getVersion() const { return version; }
     const std::string& getBody() const { return body; }
+    const std::string& getContentType() const { return contenttype; }
     const std::map<std::string, std::string>& getHeaders() const { return headers; }
     std::string getHeader(const std::string& name) const;
     size_t getContentLength() const { return contentLength; }
@@ -46,6 +47,7 @@ private:
     std::string query;
     std::string version;
     std::string body;
+    std::string contenttype;
     std::map<std::string, std::string> headers;
     bool complete;
     size_t contentLength;

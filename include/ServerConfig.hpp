@@ -22,7 +22,7 @@ struct RouteConfig {
     std::string root;
     std::string index;
     std::vector<std::string> methods;
-    std::string cgiExtension;
+    std::map<std::string, std::string> cgiExtension;
     std::string uploadStore;
     bool autoIndex;
     size_t clientMaxBodySize;

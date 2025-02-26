@@ -58,6 +58,10 @@ class Connection {
 		bool appendRequestData(const std::string& data, int socket);
 		void processRequest();
 		void updateLastActivity();
+
+		// find the resource extension in the current route, if one of the CGI, return cmd line related to it
+		// if not, empty string
+		std::string		getCgiCommand(HttpRequest r, RouteConfig route );
 };
 
 #endif
