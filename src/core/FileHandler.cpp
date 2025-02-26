@@ -301,37 +301,55 @@ void FileHandler::handleCookie(RouteConfig route, HttpResponse& response, const 
 {
     
     std::string     session;
+    std::string     sessionID;
+    char            times[100];
+    bool            generate = false;
+
     std::string     key = "session-id=";
     size_t          pos = httpRequest.getCookie().find(key);
-    std::string     sessionID;
 
-    if (pos != std::string::npos)
+    if (httpRequest.getContentLength() > 0)
+    {
+        generate = true;
+    }
+    else if (pos != std::string::npos)
     {
         pos += key.length();
         size_t end = httpRequest.getCookie().find(";", pos);
         sessionID = httpRequest.getCookie().substr(pos, end - pos);
-        session = route.uploadStore + "/" + sessionID;
+        sessionID = route.uploadStore + "/" + sessionID;
+        struct stat buffer;
+        if (stat(session.c_str(), &buffer) != 0)
+        {
+            session = sessionID;
+        }
     }
-    else if (httpRequest.getContentLength() > 0)
-    {
+
+    if (generate) {
         const std::string chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
         
-
         std::srand(std::time(0));
 
         for (size_t i = 0; i < 32; ++i) {
             sessionID += chars[std::rand() % chars.size()];
         }
+
         session = route.uploadStore + "/" + sessionID;
+        std::time_t now = std::time(NULL);
+        now +=  60;
+        std::tm *gmt_time = std::gmtime(&now);
+        std::strftime(times, sizeof(times), "%a, %d %b %Y %H:%M:%S GMT", gmt_time);
         std::cout << session;
+
         std::ofstream outfile(session.c_str());
         if (outfile) {
             outfile << "name=" + requestBody;
+            outfile << "expire=" + std::string(times);
             outfile.close();
         }
         
     }
-    std::cout << httpRequest.getCookie() << "-----------------" << session << "-------------";
+    
     int pipefds_out[2];
     int pipefds_in[2];
 
@@ -444,18 +462,12 @@ void FileHandler::handleCookie(RouteConfig route, HttpResponse& response, const 
 
         close(pipefds_out[0]);
 
-        std::time_t now = std::time(NULL);
-        now += 60 * 60;
-        std::tm *gmt_time = std::gmtime(&now);
-        char time[100];
-        std::strftime(time, sizeof(time), "%a, %d %b %Y %H:%M:%S GMT", gmt_time);
-
         if (finished && WIFEXITED(status) && WEXITSTATUS(status) == 0) {
             response.setStatus(200);
             response.setHeader("Content-Type", "text/html");
             if (!sessionID.empty())
             {
-                response.setHeader("Set-Cookie", "session-id=" + sessionID + ";" + " Expires=" + std::string(time) + ";" + " Secure; HttpOnly;" );
+                response.setHeader("Set-Cookie", "session-id=" + sessionID + ";" + " Expires=" + std::string(times) + ";" + " Secure; HttpOnly;" );
             }
             response.setBody(output);
         } else {

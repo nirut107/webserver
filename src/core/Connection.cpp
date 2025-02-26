@@ -342,7 +342,6 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
 void Connection::processRequest() {
     size_t pos;
     std::string raw = requestBuffer;
-
     while ((pos = requestBuffer.find("\r\n\r\n")) != std::string::npos) {
         HttpRequest httpRequest;
         std::string request = requestBuffer.substr(0, pos + 4);
