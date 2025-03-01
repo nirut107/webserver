@@ -360,19 +360,17 @@ void Connection::processRequest() {
 
                 try {
 
-                    bool    found = false; 
+                    bool    found_method = false; 
                     for( std::vector<std::string>::const_iterator it = route->methods.begin(); it != route->methods.end(); ++it  )
                     {
                         if( httpRequest.getMethod() ==  *it)
                         { 
-                            found = true;
+                            found_method = true;
                             break;
                         }
-                    }
-                    std::cout << "\n" <<  route->clientMaxBodySize << "==== check MAX NOT TRUE \n" << httpRequest.getContentLength();
-                    if(!found)
+                    }                
+                    if(!found_method)
                     {
-                        std::cout << "\t\tNOT FOUND" << std::endl;
                         response.setStatus(405);
                         response.setBody(HttpResponse::getDefaultErrorPage(405));
                     } else if (httpRequest.getContentLength() > route->clientMaxBodySize) {
