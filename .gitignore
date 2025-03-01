@@ -1,6 +1,6 @@
 
-# ../objects
-# .vscode
+../objects
+.vscode/
+./webserv
 # ../tests/stress_logs
-# ./webserv
 # www/html/uploads

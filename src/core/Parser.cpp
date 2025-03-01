@@ -16,6 +16,17 @@
 #include <iostream>
 #include <cstdlib>
 
+static std::vector<std::string> split(const std::string& str) {
+    std::vector<std::string> result;
+    std::istringstream iss(str);
+    std::string word;
+    while (iss >> word) {
+        result.push_back(word);
+    }
+    return result;
+}
+
+
 static std::string trim(const std::string &s) {
 	std::string r = s;
 	while (!r.empty() && (r[0] == ' ' || r[0] == '\t'))
@@ -180,8 +191,22 @@ std::vector<ServerConfig> Parser::parseConfig(const std::string &filePath) {
 				} else if (directive == "index") {
 					currentRoute.index = value;
 					std::cout << "Set index to: '" << currentRoute.index << "' (length: " << currentRoute.index.length() << ")" << std::endl;
-				} else if (directive == "cgi_extension") {
-					currentRoute.cgiExtension = value;
+				} else if (directive == "cgi_pass") {
+					std::vector<std::string> tokens = split(value);
+					// tokens size not equal to (.ext, command)
+					if(tokens.size() != 2)
+					{
+						std::cout << "\033[31m[NOTE] : error parsing cgi extensions, too few or too much arguments \033[0m" << std::endl;
+						continue;
+					}
+					// extensions not start with .
+					if(tokens[0][0] != '.')
+					{
+						std::cout << "\033[31m[NOTE] : error parsing cgi extensions, extensions shoruld start with . \033[0m" << std::endl;
+						continue;
+					}
+					currentRoute.cgiExtensions[ tokens[0] ] = tokens[1];
+
 				} else if (directive == "upload_store") {
 					currentRoute.uploadStore = value;
 				} else if (directive == "client_max_body_size") {

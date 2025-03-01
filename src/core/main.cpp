@@ -45,7 +45,23 @@ void printConfig(const std::vector<ServerConfig>& servers) {
 				std::cout << servers[i].routes[r].methods[m] << " ";
 			}
 			std::cout << std::endl;
-			std::cout << "        CGI Extension: " << servers[i].routes[r].cgiExtension << std::endl;
+			//std::cout << "        CGI Extensions: " << servers[i].routes[r].cgiExtension << std::endl;
+			if(servers[i].routes[r].cgiExtensions.size() == 0)
+			{
+				std::cout << "        CGI Extensions : (none) " << std::endl;
+			}
+			else 
+			{
+				std::map<std::string, std::string> s  = servers[i].routes[r].cgiExtensions;
+				std::cout << "        CGI Extensions :" << std::endl;
+				for( std::map <std::string,std::string>::iterator it = s.begin(); it != s.end(); ++it)
+				{
+					std::cout << "\t - " << it->first << "\t\t" << it->second << std::endl;
+				}
+			}
+			
+
+
 			std::cout << "        Upload Store: " << servers[i].routes[r].uploadStore << std::endl;
 			std::cout << "        Auto Index: " << (servers[i].routes[r].autoIndex ? "on" : "off") << std::endl;
 			std::cout << "        Max Body Size: " << servers[i].routes[r].clientMaxBodySize << std::endl;
