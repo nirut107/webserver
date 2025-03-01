@@ -347,6 +347,7 @@ void Connection::processRequest() {
         std::string request = requestBuffer.substr(0, pos + 4);
         requestBuffer = requestBuffer.substr(pos + 4);
 
+
         if (httpRequest.parse(request, requestBodyBin)) {
 
             std::cout << "\nProcessing request: " << request << " " << httpRequest.getContentLength() << "========="<< std::endl;
@@ -359,20 +360,42 @@ void Connection::processRequest() {
                 std::cout << "Route upload store: " << route->uploadStore << std::endl;
 
                 try {
+                    // if(true)
+                    // {
+                    //     response.setStatus(403);
+                    //     response.setBody(HttpResponse::getDefaultErrorPage(403));
+                    // }
 
-                    bool    found_method = false; 
-                    for( std::vector<std::string>::const_iterator it = route->methods.begin(); it != route->methods.end(); ++it  )
+                    std::map<std::string, std::string>::const_iterator mit;
+                    bool    is_cgi = false; 
+
+                    std::string requestResource = httpRequest.getPath();
+                        // if is one of the routes, try add the default index to requestResource, if available
+
+                    if (httpRequest.getPath() == route->path  && !route->index.empty())
+                        requestResource =  "/" + route->index ;
+                    size_t pos = requestResource.find_last_of('.');
+                    if(route->cgiExtensions.size() > 0 && pos != std::string::npos)
                     {
-                        if( httpRequest.getMethod() ==  *it)
-                        { 
-                            found_method = true;
-                            break;
-                        }
-                    }                
-                    if(!found_method)
+                        std::string ext = requestResource.substr(pos, requestResource.length());
+                        mit = route->cgiExtensions.find(ext);
+                        // is one of the CGI
+                        if (mit != route->cgiExtensions.end())                        
+                            is_cgi = true; 
+
+                    }   
+                    // 2025-03-01, rewrite the "method not allowed" checking
+                    if(std::find(route->methods.begin(),route->methods.end(), httpRequest.getMethod()) == route->methods.end())
                     {
                         response.setStatus(405);
                         response.setBody(HttpResponse::getDefaultErrorPage(405));
+                    }  else if(is_cgi) {                    
+                        // CGI stuff will be done here 
+                        std::string strBody(requestOnlyBodyBin.size(), '\0');
+                        std::copy(requestOnlyBodyBin.begin(), requestOnlyBodyBin.end(), strBody.begin());
+                        FileHandler::handleCgis(*route, response, httpRequest, strBody, mit->first , mit->second);                                
+
+                        
                     } else if (httpRequest.getContentLength() > route->clientMaxBodySize) {
                         std::cerr << "Content length " << httpRequest.getContentLength() 
                                 << " exceeds max body size " << route->clientMaxBodySize << std::endl;
@@ -384,13 +407,15 @@ void Connection::processRequest() {
                         std::copy(requestOnlyBodyBin.begin(), requestOnlyBodyBin.end(), strBody.begin());
                         FileHandler::handleCookie(*route, response, httpRequest, strBody);
                     } else if (httpRequest.getMethod() == "GET") {
-                        if (httpRequest.getPath().find("/cgi-bin") != std::string::npos)
-                        {
-                            std::string strBody(requestOnlyBodyBin.size(), '\0');
-                            std::copy(requestOnlyBodyBin.begin(), requestOnlyBodyBin.end(), strBody.begin());
-                            FileHandler::handleCgi(*route, response, httpRequest, strBody);
-                        }
-                        else if (httpRequest.getPath() == route->path)
+                        // if (httpRequest.getPath().find("/cgi-bin") != std::string::npos)
+                        // {
+                        //     std::string strBody(requestOnlyBodyBin.size(), '\0');
+                        //     std::copy(requestOnlyBodyBin.begin(), requestOnlyBodyBin.end(), strBody.begin());
+                        //     FileHandler::handlePythonCgi(*route, response, httpRequest, strBody);
+                        // }
+                        // else 
+                        
+                        if (httpRequest.getPath() == route->path)
                         {
                             FileHandler::handleGet(route->root + "/" + route->index, response, route->autoIndex, route->path);
                         }
@@ -414,13 +439,15 @@ void Connection::processRequest() {
                             std::cout << "Using upload store path: " << uploadPath << std::endl;
                         }
 
-                        if (httpRequest.getPath().find("/cgi-bin") != std::string::npos)
-                        {
-                            std::string strBody(requestOnlyBodyBin.size(), '\0');
-                            std::copy(requestOnlyBodyBin.begin(), requestOnlyBodyBin.end(), strBody.begin());
-                            FileHandler::handleCgi(*route, response, httpRequest, strBody);
-                        }
-                        else if (filename == "not complete.Nirut")
+                        // if (httpRequest.getPath().find("/cgi-bin") != std::string::npos)
+                        // {
+                        //     std::string strBody(requestOnlyBodyBin.size(), '\0');
+                        //     std::copy(requestOnlyBodyBin.begin(), requestOnlyBodyBin.end(), strBody.begin());
+                        //     FileHandler::handlePythonCgi(*route, response, httpRequest, strBody);
+                        // }
+                        // else 
+                        
+                        if (filename == "not complete.Nirut")
                         {
                             response.setStatus(400);
                             response.setBody(HttpResponse::getDefaultErrorPage(400));

@@ -18,6 +18,7 @@
 #include "ServerConfig.hpp"
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
+#include <algorithm> 
 #include <fstream> 
 #include <sys/socket.h>
 #include <sstream>

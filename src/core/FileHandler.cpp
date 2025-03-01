@@ -24,6 +24,22 @@
 #include <iostream>
 #include <fcntl.h>
 
+
+static void handlePhpHeader(std::string &input)
+{
+    std::cout << "\033[31mDEBUG ME - handlePhpHeader called _\033[0m";
+    std::istringstream inputStream(input);
+    std::ostringstream outputStream;
+    std::string line;
+
+    while (std::getline(inputStream, line)) {
+        if (line.find("Content-type:") != 0) 
+            outputStream << line << "\n"; 
+    }
+    input = outputStream.str();
+}
+
+
 void FileHandler::handleGet(const std::string& path, HttpResponse& response, bool autoIndex, std::string rootPath) {
 
     struct stat st;
@@ -141,7 +157,21 @@ void FileHandler::handlePost(const std::string& path, const std::string& filenam
 }
 
 
-void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& requestBodyBin)
+void FileHandler::handleCgis(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& 	requestBodyBin, std::string ext , std::string cmd)
+{
+    if ( ext == ".php")
+        return FileHandler::handlePhpCgi(route, response, httpRequest, requestBodyBin, ext, cmd);
+    if  (ext == ".py")
+        return FileHandler::handlePythonCgi(route, response, httpRequest, requestBodyBin , ext , cmd );
+    // not in permitted extensions
+    response.setStatus(500);
+    response.setBody(HttpResponse::getDefaultErrorPage(500));
+
+}
+
+
+
+void FileHandler::handlePythonCgi(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& requestBodyBin , std::string ext , std::string cmd)
 {
     std::string pathWithCgi;
     if (httpRequest.getPath() == route.path)
@@ -163,17 +193,10 @@ void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const Htt
         size_t lastSlash = cgiPath.find_last_of('/');
         route.uploadStore = cgiPath.substr(0, lastSlash + 1);
     }
-    std::string cmdPath;
-    std::string fullCmdPath;
-    if (cgiPath.find(".py") != std::string::npos)
-    {
-        fullCmdPath = "/usr/bin/python3";
-        cmdPath = "python3";
-    }
-    else{
-        cmdPath ="php-cgi";
-        fullCmdPath = "/usr/bin/php-cgi";
-    }
+
+    std::string fullCmdPath = cmd;
+    std::string cmdPath = fullCmdPath.substr( fullCmdPath.find_last_of("/") + 1, fullCmdPath.length());
+
 
     int pipefds_out[2];
     int pipefds_in[2];
@@ -233,7 +256,6 @@ void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const Htt
             NULL
         };
 
-    
         if (execve(fullCmdPath.c_str(), (char**)args, envp) == -1) {
             std::cerr << "Execve failed: " << strerror(errno) << "\n";
             exit(1);
@@ -253,7 +275,6 @@ void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const Htt
         close(pipefds_in[1]);
 
         int status;
-        int timeout = 5;
         time_t startTime = time(NULL);
         bool finished = false;
 
@@ -263,7 +284,7 @@ void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const Htt
                 finished = true;
                 break;
             } else if (result == 0) { 
-                if (time(NULL) - startTime > timeout) {
+                if (time(NULL) - startTime > FHANDLER_CGI_TIMEOUT_SEC) {
                     kill(pid, SIGKILL);
                     waitpid(pid, &status, 0);
                     break;
@@ -275,7 +296,7 @@ void FileHandler::handleCgi(RouteConfig route, HttpResponse& response, const Htt
         }
 
         std::string output;
-        char buffer[1024];
+        char buffer[FHANDLER_OUTPUT_BUFFER_SIZE];
         ssize_t bytesRead;
 
         while ((bytesRead = read(pipefds_out[0], buffer, sizeof(buffer) - 1)) > 0) {
@@ -429,7 +450,6 @@ void FileHandler::handleCookie(RouteConfig route, HttpResponse& response, const 
         close(pipefds_in[1]);
 
         int status;
-        int timeout = 5;
         time_t startTime = time(NULL);
         bool finished = false;
 
@@ -439,12 +459,12 @@ void FileHandler::handleCookie(RouteConfig route, HttpResponse& response, const 
                 finished = true;
                 break;
             } else if (result == 0) { 
-                if (time(NULL) - startTime > timeout) {
+                if (time(NULL) - startTime > FHANDLER_CGI_TIMEOUT_SEC) {
                     kill(pid, SIGKILL);
                     waitpid(pid, &status, 0);
                     break;
                 }
-                usleep(100000);
+                usleep(FHANDLER_CGI_USLEEP_MSEC);
             } else {
                 break;
             }
@@ -673,4 +693,156 @@ bool FileHandler::createDirectories(const std::string& path) {
     }
     
     return true;
+}
+
+
+void FileHandler::handlePhpCgi(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& requestBodyBin, std::string ext, std::string cmd)
+{
+
+    std::string pathWithCgi;
+    if (httpRequest.getPath() == route.path)
+        pathWithCgi = route.root + "/" + route.index;        
+    else
+        pathWithCgi = route.root + "/" + httpRequest.getPath();
+       
+    // std::string cgiPath = route.root + pathWithCgi;
+    std::string cgiPath = pathWithCgi;
+
+    // std::cout << "\033[31mDEBUG ME  === route.root: _" << route.root << "_" << std::endl;
+    // std::cout << "\033[31mDEBUG ME  === pathWithCgi: _" << pathWithCgi << "_" << std::endl;
+
+
+    if (route.uploadStore.empty())
+    {
+        size_t lastSlash = cgiPath.find_last_of('/');
+        route.uploadStore = cgiPath.substr(0, lastSlash + 1);
+    }
+    std::string cmdPath;
+    std::string fullCmdPath;
+    fullCmdPath = cmd;
+    cmdPath = fullCmdPath.substr( fullCmdPath.find_last_of("/") + 1, fullCmdPath.length());
+    // std::cout << "\033[31mDEBUG ME  === cgiPath: _" << cgiPath << "_" << std::endl;
+   
+    int pipefds_out[2];
+    int pipefds_in[2];
+
+    if (pipe(pipefds_out) == -1 || pipe(pipefds_in) == -1) {
+        response.setStatus(500);
+        response.setHeader("Content-Type", "text/html");
+        response.setBody(HttpResponse::getDefaultErrorPage(500));
+        return;
+    }
+
+    pid_t pid = fork();
+    if (pid == -1) {
+        response.setStatus(500);
+        response.setHeader("Content-Type", "text/html");
+        response.setBody(HttpResponse::getDefaultErrorPage(500));
+        return;
+    } 
+    else if (pid == 0) {
+        close(pipefds_out[0]);
+        close(pipefds_in[1]);
+
+        if (dup2(pipefds_out[1], STDOUT_FILENO) == -1 ||
+            dup2(pipefds_out[1], STDERR_FILENO) == -1 ||
+            dup2(pipefds_in[0], STDIN_FILENO) == -1) {
+            std::cerr << "dup2 failed\n";
+            exit(1);
+        }
+
+        close(pipefds_out[1]);
+        close(pipefds_in[0]);
+        
+        const char* args[] = {
+            cmdPath.c_str(),
+            cgiPath.c_str(),            
+            NULL
+        };
+
+        std::stringstream length;
+        length << httpRequest.getContentLength();
+
+        
+
+        std::string envMethod = "REQUEST_METHOD=" + httpRequest.getMethod();
+        std::string envQuery = "QUERY_STRING=" + httpRequest.getQuery();
+        std::string envContentType = "CONTENT_TYPE=" + httpRequest.getContentType();        
+        std::string envContentLength = "CONTENT_LENGTH=" + length.str();
+        std::string envRedirectStatus = "REDIRECT_STATUS=200";
+        std::string envScriptFilname = "SCRIPT_FILENAME=" + cgiPath;
+        
+        char* envp[] = {
+            (char *)(envScriptFilname.c_str()), 
+            (char *)(envMethod.c_str()),
+            (char *)(envQuery.c_str()),
+            (char *)(envContentLength.c_str()),
+            (char *)(envContentType.c_str()), 
+            (char *)(envContentLength.c_str()), 
+            (char *)(envRedirectStatus.c_str()),
+            NULL
+        };
+        if (execve(fullCmdPath.c_str(), (char**)args, envp) == -1) {
+            std::cerr << "Execve failed: " << strerror(errno) << "\n";
+            exit(1);
+        }
+        exit(0);
+    } 
+    else {
+
+        close(pipefds_out[1]);
+        close(pipefds_in[0]);
+        if (!requestBodyBin.empty()) {
+            std::vector<char> rawBody = httpRequest.getRawBody();
+            ssize_t written = write(pipefds_in[1], rawBody.data(), rawBody.size());
+            if (written == -1) {
+                std::cerr << "Failed to write request body to CGI process\n";
+            }
+        }
+        close(pipefds_in[1]);
+
+        int status;
+        time_t startTime = time(NULL);
+        bool finished = false;
+
+        while (true) {
+            pid_t result = waitpid(pid, &status, WNOHANG);
+            if (result == pid) {
+                finished = true;
+                break;
+            } else if (result == 0) { 
+                if (time(NULL) - startTime > FHANDLER_CGI_TIMEOUT_SEC) {
+                    kill(pid, SIGKILL);
+                    waitpid(pid, &status, 0);
+                    break;
+                }
+                usleep(FHANDLER_CGI_USLEEP_MSEC);
+            } else {
+                break;
+            }
+        }
+
+        std::string output;
+        char buffer[FHANDLER_OUTPUT_BUFFER_SIZE];
+        ssize_t bytesRead;
+
+        while ((bytesRead = read(pipefds_out[0], buffer, sizeof(buffer) - 1)) > 0) {
+            buffer[bytesRead] = '\0';
+            output += buffer;
+        }
+
+        close(pipefds_out[0]);
+        if (finished && WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+            // extra function to handle PHP default 200 status
+            handlePhpHeader(output);    
+
+            response.setStatus(200);
+            response.setHeader("Content-Type", "text/html");
+            response.setBody(output);
+        } else {
+            response.setStatus(500);
+            response.setHeader("Content-Type", "text/html");
+            response.setBody(HttpResponse::getDefaultErrorPage(500));
+        }
+    }
 }

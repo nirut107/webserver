@@ -11,20 +11,25 @@
 /* ************************************************************************** */
 
 #ifndef FILE_HANDLER_HPP
-#define FILE_HANDLER_HPP
+# define FILE_HANDLER_HPP
 
-#include "HttpResponse.hpp"
-#include <string>
-#include <sys/wait.h>
-#include <vector>
-#include "HttpRequest.hpp"
-#include "ServerConfig.hpp"
+# include <string>
+# include <sys/wait.h>
+# include <vector>
+# include "HttpResponse.hpp"
+# include "HttpRequest.hpp"
+# include "ServerConfig.hpp"
+# define  FHANDLER_OUTPUT_BUFFER_SIZE   102400
+# define  FHANDLER_CGI_USLEEP_MSEC        100000
+# define  FHANDLER_CGI_TIMEOUT_SEC        5
 
 class FileHandler {
 public:
     static void handleGet(const std::string& path, HttpResponse& response, bool autoIndex, std::string rootPath);
     static void handlePost(const std::string& path, const std::string& filename, HttpResponse& response, std::vector<char> requestBodyBin);
-    static void handleCgi(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& 	requestBodyBin);
+    static void handleCgis(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& requestBodyBin, std::string ext , std::string cmd);
+    static void handlePythonCgi(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& 	requestBodyBin, std::string ext , std::string cmd);
+    static void handlePhpCgi(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& requestBodyBin, std::string ext , std::string cmd);
     static void handleCookie(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& requestBody);
     static void handleDelete(const std::string& path, HttpResponse& response);
     static bool isDirectory(const std::string& path);
