@@ -1,0 +1,32 @@
+<!DOCTYPE html><html><head><title>Test Page</title>
+
+    <link rel="stylesheet" href="style.css"></head>
+ <body>
+    
+    <div class="container">
+        <form method="POST" action="test.php?action=check" enctype="multipart/form-data">    
+        <h1>Static HTML for PHP form</h1>
+        <div class="section">
+                <h2>This is a static HTML page to submit form data to PHP script.</h2>
+
+                <h3>action: <span class="hl">test.php</span> with query string <span class="hl">action=check</span></h3>
+
+                <div class="subject">First Name : </div>
+                <div> <input type="text" name="first_name" value="Random"> </div>
+
+                <div class="subject">Last Name : </div>
+                <div><input type="text" name="last_name" value="Dude"> </div>
+
+                <div class="subject">File#1: </div>
+                <div><input type="file" name="uploaded_file1" class="button"></div>
+
+                <div class="subject">File#2:</div> 
+                <div><input type="file" name="uploaded_file2" class="button"></div>
+
+                <div>
+                    <input type="submit" value="Submit" class="button"/>        
+                </div>                
+        </div>
+    </form>
+    </div>
+</body></html>
