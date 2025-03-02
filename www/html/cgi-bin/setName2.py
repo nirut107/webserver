@@ -151,7 +151,6 @@ def process_uploaded_bin():
                 right: 20px;
                 width: 100px;
                 height: 100px;
-                background: url('/api/placeholder/100/100') no-repeat center center;
                 animation: float 6s ease-in-out infinite;
             }}
             @keyframes float {{

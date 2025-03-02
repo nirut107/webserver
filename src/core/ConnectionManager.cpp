@@ -72,7 +72,6 @@ void ConnectionManager::handleRead(Connection& conn) {
     ssize_t bytesRead;
     while (true) {
         bytesRead = recv(conn.getSocket(), buffer, sizeof(buffer), 0);
-
         if (bytesRead == -1) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 break;
@@ -82,7 +81,6 @@ void ConnectionManager::handleRead(Connection& conn) {
             return;
         }
         if (bytesRead == 0) {
-            std::cout << "Client disconnected\n";
             closeConnection(conn.getSocket());
             return;
         }

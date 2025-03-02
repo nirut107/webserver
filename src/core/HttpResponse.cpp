@@ -96,27 +96,18 @@ std::string HttpResponse::getDefaultErrorPage(int code) {
               << "    <title>Error " << code << "</title>\n"
               << "    <style>\n"
               << "        * { margin: 0; padding: 0; box-sizing: border-box; }\n"
-              << "        body { text-align: center; font-family: 'Arial', sans-serif; background: linear-gradient(to bottom, #0B1026 0%, #1B2735 50%, #090A0F 100%); color: #fff; min-height: 100vh; padding: 20px; position: relative; overflow-x: hidden; }\n"
+              << "        .containerz { text-align: center; font-family: 'Arial', sans-serif; background: linear-gradient(to bottom, #0B1026 0%, #1B2735 50%, #090A0F 100%); color: #fff;  padding: 20px; position: relative; overflow-x: hidden; }\n"
               << "        h1 { text-align: center; color: #7EB6FF; font-size: 2.5em; margin-bottom: 40px; text-shadow: 0 0 10px rgba(126, 182, 255, 0.5); }\n"
               << "        .section { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); padding: 25px; margin: 30px 0; border-radius: 15px; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); }\n"
               << "        .button:hover { background: linear-gradient(45deg, #2980b9, #3498db); transform: scale(1.05); box-shadow: 0 0 15px rgba(52, 152, 219, 0.5); }\n"
               << "    </style>\n"
               << "</head>\n"
               << "<body>\n"
-              << "    <div class='container'>\n"
+              << "    <div class='containerz'>\n"
               << "        <h1>Error " << code << "</h1>\n"
               << "        <div>\n"
               << "            <h2>" << getStatusText(code)<< "</h2>\n"
-              << "        </div>\n"
-              << "    </div>\n"
-              << "</body>\n"
-              << "</html>\n";
-        //  << "<!DOCTYPE html>\n"
-        //  << "<html><head><title>Error " << code << "</title>"
-        //  << "<style>body{font-family:Arial,sans-serif;margin:40px;line-height:1.6}\n"
-        //  << "h1{color:#D33;} .container{max-width:600px;margin:0 auto;}</style></head>"
-        //  << "<body><div class='container'><h1>Error " << code << "</h1>"
-        //  << "<p>" << getStatusText(code) << ": ";
+              << "        </div>\n";
     
     switch (code) {
         case 400: html << "The server cannot process the request due to client error."; break;

@@ -204,7 +204,7 @@ void FileHandler::handlePythonCgi(RouteConfig route, HttpResponse& response, con
         pathWithCgi = pathWithCgi.substr(route.path.length());
     }
     std::string cgiPath = route.root + pathWithCgi;
-    std::cout << " Run cgi with path " << cgiPath << std::endl;
+    // std::cout << " Run cgi with path " << cgiPath << std::endl;
     if (route.uploadStore.empty())
     {
         size_t lastSlash = cgiPath.find_last_of('/');
@@ -378,7 +378,6 @@ void FileHandler::handleCookie(RouteConfig route, HttpResponse& response, const 
         now +=  60;
         std::tm *gmt_time = std::gmtime(&now);
         std::strftime(times, sizeof(times), "%a, %d %b %Y %H:%M:%S GMT", gmt_time);
-        std::cout << session;
 
         std::ofstream outfile(session.c_str());
         if (outfile) {
@@ -494,7 +493,6 @@ void FileHandler::handleCookie(RouteConfig route, HttpResponse& response, const 
 
         while ((bytesRead = read(pipefds_out[0], buffer, sizeof(buffer) - 1)) > 0) {
             buffer[bytesRead] = '\0';
-            std::cout << buffer;
             output += buffer;
         }
 
@@ -559,7 +557,6 @@ std::string FileHandler::generateDirectoryListing(const std::string& path, std::
     html << "<head>\n";
     html << "    <meta charset=\"UTF-8\">\n";
     html << "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
-    html << "    <title >Directory listing for " << path << "</title>\n";
     html << "    <style>\n";
     html << "        * { margin: 0; padding: 0; box-sizing: border-box; }\n";
     html << "        body {\n";
@@ -630,7 +627,6 @@ std::string FileHandler::generateDirectoryListing(const std::string& path, std::
     html << "</head>\n";
     html << "<body>\n";
     html << "    <div class=\"container\">\n";
-    html << "       <h1 class=\"ti\">Directory listing for " <<  path << "</h1>\n";
 
 
     struct dirent* entry;

@@ -20,6 +20,11 @@
 #include "ConnectionManager.hpp"
 #include "FileHandler.hpp"
 
+#define INFO_COLOR "\033[32m"
+#define RESET_COLOR "\033[0m" 
+#define ERROR_COLOR "\033[31m"
+#define REQUEST_COLOR "\033[34m"
+
 class Server {
 private:
     std::vector<int> serverSockets;
