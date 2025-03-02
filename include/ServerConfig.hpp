@@ -26,6 +26,8 @@ struct RouteConfig {
     std::string                         uploadStore;
     bool                                autoIndex;
     size_t                              clientMaxBodySize;
+    int                                 redirectStatus;
+    std::string                         redirectPath;
 
     RouteConfig() : autoIndex(false), clientMaxBodySize(1024 * 1024 * 8) {}
 };

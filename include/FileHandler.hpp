@@ -26,11 +26,12 @@
 class FileHandler {
 public:
     static void handleGet(const std::string& path, HttpResponse& response, bool autoIndex, std::string rootPath);
-    static void handlePost(const std::string& path, const std::string& filename, HttpResponse& response, std::vector<char> requestBodyBin);
+    // static void handlePost(const std::string& path, const std::string& filename, HttpResponse& response, std::vector<char> requestBodyBin);
     static void handleCgis(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& requestBodyBin, std::string ext , std::string cmd);
     static void handlePythonCgi(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& 	requestBodyBin, std::string ext , std::string cmd);
     static void handlePhpCgi(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& requestBodyBin, std::string ext , std::string cmd);
     static void handleCookie(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& requestBody);
+    static void handleUpload(const std::string& path, const std::string& filename, HttpResponse& response, std::vector<char> requestBodyBin);
     static void handleDelete(const std::string& path, HttpResponse& response);
     static bool isDirectory(const std::string& path);
     static bool createDirectories(const std::string& path);

@@ -350,27 +350,20 @@ void Connection::processRequest() {
 
         if (httpRequest.parse(request, requestBodyBin)) {
 
-            std::cout << "\nProcessing request: " << request << " " << httpRequest.getContentLength() << "========="<< std::endl;
-
-            HttpResponse response;
             
+            HttpResponse response;
             const RouteConfig* route = Router::findRoute(*config, httpRequest.getPath());
+            std::cout << "\nProcessing request: " << request << " " << httpRequest.getContentLength() <<"========="<< std::endl;
             if (route) {
                 std::cout << "Found route with path: " << route->path << std::endl;
                 std::cout << "Route upload store: " << route->uploadStore << std::endl;
-
+                
+                  
                 try {
-                    // if(true)
-                    // {
-                    //     response.setStatus(403);
-                    //     response.setBody(HttpResponse::getDefaultErrorPage(403));
-                    // }
-
                     std::map<std::string, std::string>::const_iterator mit;
                     bool    is_cgi = false; 
 
                     std::string requestResource = httpRequest.getPath();
-                        // if is one of the routes, try add the default index to requestResource, if available
 
                     if (httpRequest.getPath() == route->path  && !route->index.empty())
                         requestResource =  "/" + route->index ;
@@ -379,18 +372,19 @@ void Connection::processRequest() {
                     {
                         std::string ext = requestResource.substr(pos, requestResource.length());
                         mit = route->cgiExtensions.find(ext);
-                        // is one of the CGI
                         if (mit != route->cgiExtensions.end())                        
                             is_cgi = true; 
 
-                    }   
-                    // 2025-03-01, rewrite the "method not allowed" checking
-                    if(std::find(route->methods.begin(),route->methods.end(), httpRequest.getMethod()) == route->methods.end())
+                    }
+                    if (!route->redirectPath.empty() && route->redirectStatus)
+                    {
+                        response.setStatus(route->redirectStatus);
+                        response.setHeader("Location", route->redirectPath);
+                    } else if(std::find(route->methods.begin(),route->methods.end(), httpRequest.getMethod()) == route->methods.end())
                     {
                         response.setStatus(405);
                         response.setBody(HttpResponse::getDefaultErrorPage(405));
                     }  else if(is_cgi) {                    
-                        // CGI stuff will be done here 
                         std::string strBody(requestOnlyBodyBin.size(), '\0');
                         std::copy(requestOnlyBodyBin.begin(), requestOnlyBodyBin.end(), strBody.begin());
                         FileHandler::handleCgis(*route, response, httpRequest, strBody, mit->first , mit->second);                                
@@ -402,14 +396,6 @@ void Connection::processRequest() {
                         response.setStatus(413);
                         response.setBody(HttpResponse::getDefaultErrorPage(413));
                     } else if (httpRequest.getMethod() == "GET") {
-                        // if (httpRequest.getPath().find("/cgi-bin") != std::string::npos)
-                        // {
-                        //     std::string strBody(requestOnlyBodyBin.size(), '\0');
-                        //     std::copy(requestOnlyBodyBin.begin(), requestOnlyBodyBin.end(), strBody.begin());
-                        //     FileHandler::handlePythonCgi(*route, response, httpRequest, strBody);
-                        // }
-                        // else 
-                        
                         if (httpRequest.getPath() == route->path)
                         {
                             FileHandler::handleGet(route->root + "/" + route->index, response, route->autoIndex, route->path);
@@ -433,15 +419,6 @@ void Connection::processRequest() {
                             uploadPath = route->uploadStore;
                             std::cout << "Using upload store path: " << uploadPath << std::endl;
                         }
-
-                        // if (httpRequest.getPath().find("/cgi-bin") != std::string::npos)
-                        // {
-                        //     std::string strBody(requestOnlyBodyBin.size(), '\0');
-                        //     std::copy(requestOnlyBodyBin.begin(), requestOnlyBodyBin.end(), strBody.begin());
-                        //     FileHandler::handlePythonCgi(*route, response, httpRequest, strBody);
-                        // }
-                        // else 
-                        
                         if (filename == "not complete.Nirut")
                         {
                             response.setStatus(400);
@@ -449,11 +426,12 @@ void Connection::processRequest() {
                         }
                         else if (!filename.empty())
                         {
-                            FileHandler::handlePost(uploadPath, filename, response, requestOnlyBodyBin);
+                            FileHandler::handleUpload(uploadPath, filename, response, requestOnlyBodyBin);
                         }
                         else
                         {
-                            FileHandler::handlePost(uploadPath, filename, response, requestOnlyBodyBin);
+                            response.setStatus(400);
+                            response.setBody(HttpResponse::getDefaultErrorPage(400));
                         }
                     } else if (httpRequest.getMethod() == "DELETE") {
                         std::string deletePath;

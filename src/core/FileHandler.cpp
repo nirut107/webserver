@@ -120,7 +120,18 @@ static std::string getUniqueFilename(const std::string& path, const std::string&
     return uniqueName;
 }
 
-void FileHandler::handlePost(const std::string& path, const std::string& filename, HttpResponse& response, std::vector<char> requestBodyBin) {
+// void FileHandler::handlePost(const std::string& path, const std::string& filename, HttpResponse& response, std::vector<char> requestBodyBin) {
+    
+//     std::string fullPath = path + "/" + getUniqueFilename(path, filename);;
+    
+//     response.setStatus(200);
+//     response.setHeader("Content-Type", "application/json");
+//     response.setHeader("Location", fullPath);
+//     response.setBody();
+
+// }
+
+void FileHandler::handleUpload(const std::string& path, const std::string& filename, HttpResponse& response, std::vector<char> requestBodyBin) {
     
     std::string fullPath = path + "/" + getUniqueFilename(path, filename);;
 
@@ -156,14 +167,12 @@ void FileHandler::handlePost(const std::string& path, const std::string& filenam
 
 }
 
-
 void FileHandler::handleCgis(RouteConfig route, HttpResponse& response, const HttpRequest httpRequest, std::string& 	requestBodyBin, std::string ext , std::string cmd)
 {
     if ( ext == ".php")
         return FileHandler::handlePhpCgi(route, response, httpRequest, requestBodyBin, ext, cmd);
     if  (ext == ".py")
         return FileHandler::handlePythonCgi(route, response, httpRequest, requestBodyBin , ext , cmd );
-    // not in permitted extensions
     response.setStatus(500);
     response.setBody(HttpResponse::getDefaultErrorPage(500));
 
@@ -182,7 +191,7 @@ void FileHandler::handlePythonCgi(RouteConfig route, HttpResponse& response, con
     {
        pathWithCgi = httpRequest.getPath();
     }
-    
+
     if (httpRequest.getPath().find("/cookie") != std::string::npos) {
         std::string strBody(requestBodyBin.size(), '\0');
         std::copy(requestBodyBin.begin(), requestBodyBin.end(), strBody.begin());
