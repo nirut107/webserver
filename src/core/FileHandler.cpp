@@ -182,6 +182,14 @@ void FileHandler::handlePythonCgi(RouteConfig route, HttpResponse& response, con
     {
        pathWithCgi = httpRequest.getPath();
     }
+    
+    if (httpRequest.getPath().find("/cookie") != std::string::npos) {
+        std::string strBody(requestBodyBin.size(), '\0');
+        std::copy(requestBodyBin.begin(), requestBodyBin.end(), strBody.begin());
+        FileHandler::handleCookie(route, response, httpRequest, strBody);
+        return ;
+    }
+
     while (pathWithCgi.find("/cgi-bin") != std::string::npos)
     {
         pathWithCgi = pathWithCgi.substr(route.path.length());
