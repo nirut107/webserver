@@ -195,7 +195,7 @@ html_content1 = """
                 });
 
                 const result = await response.text();
-                window.location.href = '/';
+                window.location.href = '/cookie/session.py';
                 document.getElementById('uploadResponse').innerHTML = `Session Started for: ${result}`;
             } catch (error) {
                 document.getElementById('uploadResponse').innerHTML = `Error: ${error.message}`;

@@ -353,7 +353,6 @@ void Connection::processRequest() {
             
             HttpResponse response;
             const RouteConfig* route = Router::findRoute(*config, httpRequest.getPath());
-            std::cout << "\nProcessing request: " << request << " " << httpRequest.getContentLength() <<"========="<< std::endl;
             if (route) {
                 std::cout << "Found route with path: " << route->path << std::endl;
                 std::cout << "Route upload store: " << route->uploadStore << std::endl;
@@ -398,7 +397,12 @@ void Connection::processRequest() {
                     } else if (httpRequest.getMethod() == "GET") {
                         if (httpRequest.getPath() == route->path)
                         {
-                            FileHandler::handleGet(route->root + "/" + route->index, response, route->autoIndex, route->path);
+                            if (route->autoIndex) {
+                                FileHandler::handleGet(route->root, response, route->autoIndex, route->path);
+                            }
+                            else {
+                                FileHandler::handleGet(route->root + "/" + route->root, response, route->autoIndex, route->path);
+                            }
                         }
                         else
                         {

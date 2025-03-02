@@ -6,9 +6,9 @@
 
 body {
 	font-family: 'Arial', sans-serif;
-	background-image: url('galaxy.jpg');
+	/* background-image: url('galaxy.jpg'); */
 	background-size:cover;
-	/* background: linear-gradient(to bottom, #0B1026 0%, #1B2735 50%, #090A0F 100%); */
+	background: linear-gradient(to bottom, #0B1026 0%, #1B2735 50%, #090A0F 100%);
 	color: #fff;
 	min-height: 100vh;
 	padding: 20px;

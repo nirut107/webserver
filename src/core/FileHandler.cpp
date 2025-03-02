@@ -268,6 +268,7 @@ void FileHandler::handlePythonCgi(RouteConfig route, HttpResponse& response, con
             (char*)(envMethod.c_str()),
             (char*)(envQuery.c_str()),
             (char*)(envContentLength.c_str()),
+            (char*)envContentType.c_str(),
             (char*)(envUploadDir.c_str()),
             (char*)(envFileSize.c_str()),
             NULL
