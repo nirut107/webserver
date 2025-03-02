@@ -210,9 +210,13 @@ std::vector<ServerConfig> Parser::parseConfig(const std::string &filePath) {
 				} else if (directive == "upload_store") {
 					currentRoute.uploadStore = value;
 				} else if (directive == "client_max_body_size") {
-					
 					currentRoute.clientMaxBodySize = static_cast<size_t>(std::atoi(value.c_str()));
 					currentRoute.clientMaxBodySize *= 1024 * 1000;
+				} else if (directive == "return") {
+					std::istringstream iss(value);
+					std::string status; 
+    				iss >> status >> currentRoute.redirectPath; 
+					currentRoute.redirectStatus = static_cast<size_t>(std::atoi(status.c_str()));
 				}
 			}
 		}
