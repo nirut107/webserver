@@ -13,7 +13,7 @@ async function uploads() {
 	try {
 		const response = await fetch('/uploads');
 		const text = await response.text();
-		document.getElementById('uploadStore').innerHTML = `Response: ${text}`;
+		document.getElementById('uploadStore').innerHTML = text;
 	} catch (error) {
 		document.getElementById('uploadStore').innerHTML = `Error: ${error.message}`;
 	}
@@ -31,6 +31,9 @@ document.getElementById('uploadForm').onsubmit = async (e) => {
 			body: formData
 		});
 		const result = await response.text();
+		const response2 = await fetch('/uploads')
+		const result2 = await response2.text();
+		document.getElementById('uploadStore').innerHTML = result2;
 		document.getElementById('uploadResponse').innerHTML = `Upload Result: ${result}`;
 	} catch (error) {
 		document.getElementById('uploadResponse').innerHTML = `Error: ${error.message}`;
@@ -49,6 +52,9 @@ async function testDelete() {
 			method: 'DELETE'
 		});
 		const result = await response.text();
+		const response2 = await fetch('/uploads')
+		const result2 = await response2.text();
+		document.getElementById('uploadStore').innerHTML = result2;
 		document.getElementById('deleteResponse').innerHTML = `Delete Result: ${result}`;
 	} catch (error) {
 		document.getElementById('deleteResponse').innerHTML = `Error: ${error.message}`;

@@ -75,6 +75,7 @@ int main(int argc, char* argv[]) {
 
 
 	try {
+		std::cout << "[" << INFO_COLOR << "INFO" << RESET_COLOR <<"]  Server starting... " << std::endl;
 		std::string configPath = (argc > 1) ? argv[1] : "config/default.conf";
 		Parser parser;			
 		std::vector<ServerConfig> servers = parser.parseConfig(configPath);
@@ -89,7 +90,7 @@ int main(int argc, char* argv[]) {
 				
 		
 	} catch (const std::exception& e) {
-		std::cerr << "Error: " << e.what() << std::endl;
+		std::cerr << "[" << ERROR_COLOR << "ERROR" << RESET_COLOR  << "] "  << e.what() << std::endl;
 		return 1;
 	}
 }

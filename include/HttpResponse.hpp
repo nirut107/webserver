@@ -15,6 +15,12 @@
 #include <string>
 #include <map>
 #include <sstream>
+#include <iostream>
+
+#define INFO_COLOR "\033[32m"
+#define RESET_COLOR "\033[0m" 
+#define ERROR_COLOR "\033[31m"
+#define REQUEST_COLOR "\033[34m"
 
 class HttpResponse {
 public:
@@ -26,6 +32,7 @@ public:
     void setBody(const std::string& content);
     void setContentType(const std::string& type) { setHeader("Content-Type", type); }
     bool send(int clientSocket);
+    int  getStatus(){return statusCode;};
     std::string serialize() const;
     void clear();
 

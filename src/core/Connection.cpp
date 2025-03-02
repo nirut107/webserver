@@ -164,7 +164,7 @@ void Connection::RequestCutOffBody(const std::string& headers, std::vector<char>
                     if (filename_end != std::string::npos) {
                         filename = header.substr(filename_pos, filename_end - filename_pos);
                         filename = urlDecode(filename);
-                        std::cout << "Extracted filename: " << this->filename << std::endl;
+                        // std::cout << "Extracted filename: " << this->filename << std::endl;
                     }
                 }
                 break;
@@ -172,9 +172,9 @@ void Connection::RequestCutOffBody(const std::string& headers, std::vector<char>
             ++header_start;
         }
 
-        if (this->filename.empty()) {
-            this->filename = "default_upload.bin";
-        }
+        // if (this->filename.empty()) {
+        //     this->filename = "default_upload.bin";
+        // }
 
 
         std::vector<char>::iterator content_start = it;
@@ -257,7 +257,7 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
         }
     }
 
-    std::cout << "check content_length :: received_body_size " << content_length << " :: " << received_body_size << "\n";
+    // std::cout << "check content_length :: received_body_size " << content_length << " :: " << received_body_size << "\n";
 
     if (!boundary.empty() && !requestBodyBin.empty()) {
         std::vector<char>::iterator it = requestBodyBin.begin();
@@ -295,7 +295,7 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
                     if (filename_end != std::string::npos) {
                         filename = header.substr(filename_pos, filename_end - filename_pos);
                         filename = urlDecode(filename);
-                        std::cout << "Extracted filename: " << filename << std::endl;
+                        // std::cout << "Extracted filename: " << filename << std::endl;
                     }
                 }
                 break;
@@ -303,9 +303,9 @@ bool Connection::appendRequestData(const std::string& data, int socket) {
             ++it;
         }
 
-        if (filename.empty()) {
-            filename = "default_upload.bin";
-        }
+        // if (filename.empty()) {
+        //     filename = "default_upload.bin";
+        // }
         std::vector<char>::iterator content_start = it;
         while (content_start != end - 4) {
             if (*content_start == '\r' && *(content_start + 1) == '\n' &&
@@ -350,12 +350,23 @@ void Connection::processRequest() {
 
         if (httpRequest.parse(request, requestBodyBin)) {
 
-            
             HttpResponse response;
+            
+            if (!httpRequest.getMethod().empty() && !httpRequest.getPath().empty()) {
+                std::time_t now_time = std::time(NULL);
+                char timeStr[26];  // Buffer to hold the formatted time string
+
+                std::tm* time_info = std::localtime(&now_time);
+                std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", time_info);
+
+                std::cout << "[" << INFO_COLOR << timeStr << RESET_COLOR  << "] "
+                << REQUEST_COLOR << "[REQUEST]  " << RESET_COLOR << httpRequest.getMethod() << " " << httpRequest.getPath()
+                << RESET_COLOR << std::endl;
+            }
             const RouteConfig* route = Router::findRoute(*config, httpRequest.getPath());
             if (route) {
-                std::cout << "Found route with path: " << route->path << std::endl;
-                std::cout << "Route upload store: " << route->uploadStore << std::endl;
+                // std::cout << "Found route with path: " << route->path << std::endl;
+                // std::cout << "Route upload store: " << route->uploadStore << std::endl;
                 
                   
                 try {
@@ -401,7 +412,7 @@ void Connection::processRequest() {
                                 FileHandler::handleGet(route->root, response, route->autoIndex, route->path);
                             }
                             else {
-                                FileHandler::handleGet(route->root + "/" + route->root, response, route->autoIndex, route->path);
+                                FileHandler::handleGet(route->root + "/" + route->index, response, route->autoIndex, route->path);
                             }
                         }
                         else
@@ -421,7 +432,7 @@ void Connection::processRequest() {
                         else 
                         {
                             uploadPath = route->uploadStore;
-                            std::cout << "Using upload store path: " << uploadPath << std::endl;
+                            // std::cout << "Using upload store path: " << uploadPath << std::endl;
                         }
                         if (filename == "not complete.Nirut")
                         {
@@ -452,9 +463,8 @@ void Connection::processRequest() {
                             filename = urlDecode(filename);
                             filename = trim(filename);
                             deletePath = route->uploadStore + "/" + filename;
-                            std::cout << deletePath << "delete\n\n";
                         }
-                        std::cout << "Using delete path: " << deletePath << std::endl;
+                        // std::cout << "Using delete path: " << deletePath << std::endl;
                         FileHandler::handleDelete(deletePath, response);
                     } else {
                         response.setStatus(405);
@@ -466,14 +476,20 @@ void Connection::processRequest() {
                     response.setBody(HttpResponse::getDefaultErrorPage(500));
                 }
             } else {
-                std::cerr << "No matching route found for path: " << httpRequest.getPath() << std::endl;
+                // std::cerr << "No matching route found for path: " << httpRequest.getPath() << std::endl;
                 response.setStatus(404);
                 response.setBody(HttpResponse::getDefaultErrorPage(404));
             }
-            
+            std::time_t now_time = std::time(NULL);
+                char timeStr[26];
+
+                std::tm* time_info = std::localtime(&now_time);
+                std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", time_info);
+            std::cout << "[" << INFO_COLOR << timeStr << RESET_COLOR << "] "
+                << RESPONSE_COLOR << "[RESPONSE] " << RESET_COLOR << "Response status: " << response.getStatus()  << std::endl;
             responseBuffer += response.serialize();
         } else {
-            std::cerr << "Failed to parse request" << std::endl;
+            // std::cerr << "Failed to parse request" << std::endl;
             HttpResponse errorResponse;
             errorResponse.setStatus(400);
             errorResponse.setBody(HttpResponse::getDefaultErrorPage(400));

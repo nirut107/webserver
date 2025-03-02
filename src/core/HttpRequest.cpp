@@ -34,14 +34,14 @@ bool HttpRequest::parseHeaders(const std::string& headers) {
     std::string line;
 
     if (!std::getline(stream, line)) {
-        std::cerr << "Failed to read request line" << std::endl;
+        // std::cerr << "Failed to read request line" << std::endl;
         return false;
     }
     if (line[line.length() - 1] == '\r') {
         line.erase(line.length() - 1);
     }
     if (!parseRequestLine(line)) {
-        std::cerr << "Failed to parse request line: [" << line << "]" << std::endl;
+        // std::cerr << "Failed to parse request line: [" << line << "]" << std::endl;
         return false;
     }
 
@@ -156,9 +156,11 @@ bool HttpRequest::parseRequestLine(const std::string& line) {
     std::istringstream lineStream(line);
     
     if (!(lineStream >> method >> path >> version)) {
-        // return false;
+        return false;
     }
-    
+    if (version.find("HTTP") == std::string::npos){
+        return false;
+    }
     // Extract query string if present
     size_t queryPos = path.find('?');
     if (queryPos != std::string::npos) {
