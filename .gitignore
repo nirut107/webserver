@@ -1,6 +1,7 @@
-
 ../objects
 .vscode/
 ./webserv
 # ../tests/stress_logs
 # www/html/uploads
+/objects
+/cookie/session
