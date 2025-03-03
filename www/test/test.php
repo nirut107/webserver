@@ -1,14 +1,38 @@
 <?php
-// $rawPostData = file_get_contents('php://input');
-// echo "Raw POST data: " . $rawPostData;
+session_start();
+
+if(empty($_SESSION['visit_count']))
+    $_SESSION['visit_count'] = 1;
+else 
+    $_SESSION['visit_count'] += 1;
+
+
+$cookieVisitCount = empty($_COOKIE['cvisit_count'])? 1 : ($_COOKIE['cvisit_count'] + 1);
+setcookie("cvisit_count", $cookieVisitCount , 0);
+
+
+// $session_save_path = ini_get('session.save_path');
+// echo "The session save path is: " . $session_save_path . "<br />";
+// $PWD = ini_get('PWD');
+// echo "The PWD is: " . $PWD . "<br />";
+// echo "session ID = " . session_id();
+// $php_ini_path = php_ini_loaded_file();
+// echo "<hr>";
+// var_dump($php_ini_path);
 
 ?>
 <!DOCTYPE html><html><head><title>PHP Page</title>
 
     <link rel="stylesheet" href="style.css"></head>
  <body>
-    
+ <!-- <pre><?php print_r($_SESSION); ?></pre>    -->
     <div class="container">
+
+    <p style="text-align:right"><input type="button" value="regenerate session" class="button" onclick="document.location.assign('regen.php');"/>        </p>
+
+        <h3 style="text-align:center">Session Visit count: <?php echo empty($_SESSION['visit_count']) ? "1" : $_SESSION['visit_count']; ?></h3>
+        <h3 style="text-align:center">Cookie Visit count: <?php echo empty($_COOKIE['cvisit_count']) ? "1" : $_COOKIE['cvisit_count']; ?></h3>
+
         <form method="POST" action="test.php?action=check" enctype="multipart/form-data">    
         <h1>Dynamic PHP Page</h1>
         <div class="section">
@@ -58,6 +82,7 @@
     ?>
     </div>
     <h3 style="text-align:center">generated on <?php print date("Y-m-d H:i:s"); ?></h3>
+    
 
 </body></html>
 
