@@ -27,13 +27,9 @@
 
 static bool handlePhpHeader(std::string &input, std::map<std::string,std::string> &headers, std::string *body)
 {
-    std::cout << " input size = " << input.size() << std::endl;
-   
     size_t cuttingPos =  input.find("\r\n\r\n");
     if (cuttingPos == std::string::npos)
         return false;
-    std::cout << " cuttingPos = " << cuttingPos << std::endl;
-
 
     *body = input.substr(cuttingPos + 4, input.length());
     std::string line; 
@@ -46,6 +42,8 @@ static bool handlePhpHeader(std::string &input, std::map<std::string,std::string
         if (line.empty()) {
             break;
         }
+        // std::cout << "\033[31m line = " << line  << "\033[0m" << std::endl;
+
         size_t  colonPos = line.find(':');
         if(colonPos == std::string::npos)
             continue; // 
@@ -59,7 +57,10 @@ static bool handlePhpHeader(std::string &input, std::map<std::string,std::string
         while (!value.empty() && std::isspace(value[value.length() - 1])) {
             value.erase(value.length() - 1);
         }
+        while(headers.find(name) != headers.end())
+            name += " ";
         headers[name] = value;
+        
     }
     return (true);
 
@@ -381,7 +382,7 @@ void FileHandler::handleCookie(RouteConfig route, HttpResponse& response, const 
         pos += key.length();
         size_t end = httpRequest.getCookie().find(";", pos);
         sessionID = httpRequest.getCookie().substr(pos, end - pos);
-        sessionID = route.uploadStore + "/" + sessionID;
+        session = route.uploadStore + "/" + sessionID;
         struct stat buffer;
         if (stat(session.c_str(), &buffer) != 0)
         {
@@ -890,7 +891,8 @@ void FileHandler::handlePhpCgi(RouteConfig route, HttpResponse& response, const 
 
             for(std::map<std::string,std::string>::iterator mit = headersSection.begin(); mit != headersSection.end(); ++mit)
             {
-                response.setHeader(mit->first , mit->second);
+                std::string cookieName = mit->first;
+                response.setHeader(cookieName , mit->second);
                 if(mit->first.find("Status") != std::string::npos)
                 {
                     statusCode = std::atoi(mit->second.substr(0,3).c_str());

@@ -39,6 +39,7 @@ setcookie("cvisit_count", $cookieVisitCount , 0);
                 <h2>This is a dynamic page generated from PHP script.</h2>
 
                 <h3>action: <span class="hl">test.php</span> with query string <span class="hl">action=check</span></h3>
+                <h3>session id = <?php echo session_id(); ?></h3>
 
                 <div class="subject">First Name : </div>
                 <div> <input type="text" name="first_name" value="<?php echo @$_POST['first_name']; ?>" placeholder="Random..."> </div>

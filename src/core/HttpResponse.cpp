@@ -51,12 +51,28 @@ bool HttpResponse::send(int clientSocket) {
     return true;
 }
 
+
+static std::string trim(const std::string& str) {
+    size_t start = 0;
+    while (start < str.length() && std::isspace(str[start])) {
+        ++start;
+    }
+
+    size_t end = str.length();
+    while (end > start && std::isspace(str[end - 1])) {
+        --end;
+    }
+
+    return str.substr(start, end - start);
+}
+
+
 std::string HttpResponse::serialize() const {
     std::ostringstream response;
     response << "HTTP/1.1 " << statusCode << " " << getStatusText(statusCode) << "\r\n";
     
     for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
-        response << it->first << ": " << it->second << "\r\n";
+        response << trim(it->first) << ": " << it->second << "\r\n";
     }
     
     response << "\r\n" << body;
@@ -134,3 +150,15 @@ void HttpResponse::clear() {
     headers.clear();
     body.clear();
 } 
+
+std::string HttpResponse::getHeader(const std::string& name) const
+{
+    std::string  ret; 
+    try {
+        ret = headers.at(name);
+    } catch(std::exception &e)
+    {
+        ret = ""; 
+    }
+    return (ret);
+}

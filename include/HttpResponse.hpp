@@ -28,7 +28,7 @@ public:
     ~HttpResponse();
 
     void setStatus(int code);
-    void setHeader(const std::string& name, const std::string& value);
+    void setHeader(const std::string& name, const std::string& value);   
     void setBody(const std::string& content);
     void setContentType(const std::string& type) { setHeader("Content-Type", type); }
     bool send(int clientSocket);
@@ -38,6 +38,7 @@ public:
 
     static std::string getDefaultErrorPage(int code);
     static std::string getStatusText(int code);
+    std::string getHeader(const std::string& name) const;
 
 private:
     int statusCode;
