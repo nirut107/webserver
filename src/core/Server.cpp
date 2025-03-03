@@ -182,7 +182,7 @@ void Server::start(const std::vector<ServerConfig>& configs) {
 // }
 
 void Server::run() {
-    std::cout  << "[" << "\e[38;5;118m"  << "SECCESS" << RESET_COLOR  << "] "<< "Starting server with " << serverSockets.size() << " listening sockets" << std::endl;
+    std::cout  << "[" << "\e[38;5;118m"  << "SUCCESS" << RESET_COLOR  << "] "<< "Starting server with " << serverSockets.size() << " listening sockets" << std::endl;
     
     std::vector<pollfd> fds;
     fds.reserve(1024);
