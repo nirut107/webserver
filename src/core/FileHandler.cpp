@@ -25,20 +25,45 @@
 #include <fcntl.h>
 
 
-static void handlePhpHeader(std::string &input)
+static bool handlePhpHeader(std::string &input, std::map<std::string,std::string> &headers, std::string *body)
 {
-    std::cout << "\033[31mDEBUG ME - handlePhpHeader called _\033[0m";
-    std::istringstream inputStream(input);
-    std::ostringstream outputStream;
-    std::string line;
+    std::cout << " input size = " << input.size() << std::endl;
+   
+    size_t cuttingPos =  input.find("\r\n\r\n");
+    if (cuttingPos == std::string::npos)
+        return false;
+    std::cout << " cuttingPos = " << cuttingPos << std::endl;
 
-    while (std::getline(inputStream, line)) {
-        if (line.find("Content-type:") != 0) 
-            outputStream << line << "\n"; 
+
+    *body = input.substr(cuttingPos + 4, input.length());
+    std::string line; 
+    std::istringstream header(input.substr(0 , cuttingPos));
+
+    while (std::getline(header, line)) {
+        if (line[line.length() - 1] == '\r') {
+            line.erase(line.length() - 1);
+        }
+        if (line.empty()) {
+            break;
+        }
+        size_t  colonPos = line.find(':');
+        if(colonPos == std::string::npos)
+            continue; // 
+        std::string name = line.substr(0, colonPos);
+        std::string value = line.substr(colonPos + 1);
+        
+        // Trim leading/trailing whitespace
+        while (!value.empty() && std::isspace(value[0])) {
+            value.erase(0, 1);
+        }
+        while (!value.empty() && std::isspace(value[value.length() - 1])) {
+            value.erase(value.length() - 1);
+        }
+        headers[name] = value;
     }
-    input = outputStream.str();
-}
+    return (true);
 
+}
 
 void FileHandler::handleGet(const std::string& path, HttpResponse& response, bool autoIndex, std::string rootPath) {
 
@@ -557,6 +582,7 @@ std::string FileHandler::generateDirectoryListing(const std::string& path, std::
     html << "<head>\n";
     html << "    <meta charset=\"UTF-8\">\n";
     html << "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
+    html << "    <title >Directory listing for " << path << "</title>\n";
     html << "    <style>\n";
     html << "        * { margin: 0; padding: 0; box-sizing: border-box; }\n";
     html << "        body {\n";
@@ -718,13 +744,7 @@ void FileHandler::handlePhpCgi(RouteConfig route, HttpResponse& response, const 
         pathWithCgi = route.root + "/" + route.index;        
     else
         pathWithCgi = route.root + "/" + httpRequest.getPath();
-       
-    // std::string cgiPath = route.root + pathWithCgi;
     std::string cgiPath = pathWithCgi;
-
-    // std::cout << "\033[31mDEBUG ME  === route.root: _" << route.root << "_" << std::endl;
-    // std::cout << "\033[31mDEBUG ME  === pathWithCgi: _" << pathWithCgi << "_" << std::endl;
-
 
     if (route.uploadStore.empty())
     {
@@ -735,7 +755,6 @@ void FileHandler::handlePhpCgi(RouteConfig route, HttpResponse& response, const 
     std::string fullCmdPath;
     fullCmdPath = cmd;
     cmdPath = fullCmdPath.substr( fullCmdPath.find_last_of("/") + 1, fullCmdPath.length());
-    // std::cout << "\033[31mDEBUG ME  === cgiPath: _" << cgiPath << "_" << std::endl;
    
     int pipefds_out[2];
     int pipefds_in[2];
@@ -770,6 +789,8 @@ void FileHandler::handlePhpCgi(RouteConfig route, HttpResponse& response, const 
         
         const char* args[] = {
             cmdPath.c_str(),
+            (char *)"-c", 
+            (char *) "config/", 
             cgiPath.c_str(),            
             NULL
         };
@@ -777,25 +798,37 @@ void FileHandler::handlePhpCgi(RouteConfig route, HttpResponse& response, const 
         std::stringstream length;
         length << httpRequest.getContentLength();
 
-        
+        char    cwdBuffer[1000];
+        getcwd(cwdBuffer, sizeof(cwdBuffer));
 
+        std::string cookie = httpRequest.getHeader("Cookie");
+
+        std::string envCGI = "GATEWAY_INTERFACE=CGI/1.1"; 
+        std::string envScriptFilname = "SCRIPT_FILENAME=" + cgiPath;
         std::string envMethod = "REQUEST_METHOD=" + httpRequest.getMethod();
         std::string envQuery = "QUERY_STRING=" + httpRequest.getQuery();
-        std::string envContentType = "CONTENT_TYPE=" + httpRequest.getContentType();        
         std::string envContentLength = "CONTENT_LENGTH=" + length.str();
+        std::string envContentType = "CONTENT_TYPE=" + httpRequest.getContentType();        
         std::string envRedirectStatus = "REDIRECT_STATUS=200";
-        std::string envScriptFilname = "SCRIPT_FILENAME=" + cgiPath;
+        std::string envCookie = "HTTP_COOKIE=" + cookie;
+
+        // not working std::string envSessionPath = "PHP_SESSION_SAVE_PATH=" + std::string(cwdBuffer) + "/cookie/session";
+        // not working std::string envPwd = "PWD=" + std::string(cwdBuffer);    
         
         char* envp[] = {
+            (char *)(envCGI.c_str()), 
             (char *)(envScriptFilname.c_str()), 
             (char *)(envMethod.c_str()),
             (char *)(envQuery.c_str()),
             (char *)(envContentLength.c_str()),
             (char *)(envContentType.c_str()), 
-            (char *)(envContentLength.c_str()), 
             (char *)(envRedirectStatus.c_str()),
+            (char *)(envCookie.c_str()), 
+            // (char *)(envPwd.c_str()),             
+            // (char *)(envSessionPath.c_str()), 
             NULL
         };
+
         if (execve(fullCmdPath.c_str(), (char**)args, envp) == -1) {
             std::cerr << "Execve failed: " << strerror(errno) << "\n";
             exit(1);
@@ -846,13 +879,26 @@ void FileHandler::handlePhpCgi(RouteConfig route, HttpResponse& response, const 
         }
 
         close(pipefds_out[0]);
-        if (finished && WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-            // extra function to handle PHP default 200 status
-            handlePhpHeader(output);    
 
-            response.setStatus(200);
-            response.setHeader("Content-Type", "text/html");
-            response.setBody(output);
+        if (finished && WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+            
+            std::string bodySection = "";
+            std::map<std::string, std::string> headersSection; 
+            handlePhpHeader(output, headersSection ,&bodySection);
+            std::string httpCodeSent = "";
+            size_t statusCode = 0 ; 
+
+            for(std::map<std::string,std::string>::iterator mit = headersSection.begin(); mit != headersSection.end(); ++mit)
+            {
+                response.setHeader(mit->first , mit->second);
+                if(mit->first.find("Status") != std::string::npos)
+                {
+                    statusCode = std::atoi(mit->second.substr(0,3).c_str());
+                }
+            }
+            response.setStatus( statusCode == 0 ? 200 : statusCode);
+            response.setBody(bodySection);
+            
         } else {
             response.setStatus(500);
             response.setHeader("Content-Type", "text/html");

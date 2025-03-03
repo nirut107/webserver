@@ -203,3 +203,15 @@ bool HttpRequest::validateRequest() {
     
     return true;
 } 
+
+std::string HttpRequest::getHeader(const std::string& name) const
+{
+    std::string  ret; 
+    try {
+        ret = headers.at(name);
+    } catch(std::exception &e)
+    {
+        ret = ""; 
+    }
+    return (ret);
+}
